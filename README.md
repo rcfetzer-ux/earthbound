@@ -20,6 +20,21 @@ npm run dev      # http://localhost:5173
 | `npm run shot` | screenshot tour of the whole level into `shots/` |
 | `npm run perf` | render-cost probe (scene complexity, fps, shadow/fill breakdown) |
 
+## Publishing
+
+The build is a static bundle with no server side and no external requests, and
+`vite.config.js` sets `base: './'`, so it runs from any path — including the
+project subpath GitHub Pages serves from.
+
+`.github/workflows/pages.yml` builds and deploys on every push to `main`. It
+needs one manual step first: **Settings → Pages → Build and deployment →
+Source: GitHub Actions**. After that the game is live at
+`https://<user>.github.io/<repo>/`.
+
+To publish from this feature branch instead of `main`, add its name to the
+workflow's `on.push.branches`, or trigger the workflow by hand from the Actions
+tab.
+
 **Controls** — `WASD`/arrows walk, `Shift` runs, `Space` or `Z` talks, `Q`/`E`
 turn the camera, `C` recentres, `M` mutes. Walk into a door to go inside.
 Touch: left half of the screen is a stick, right half is the action button.
