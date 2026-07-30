@@ -815,7 +815,7 @@ function populateOnett(zone) {
     ], { wander: 3 }],
     ['nurse', -44, 21, TOWN_Y, [
       'If you get hurt out there, come straight to the hospital.',
-      "We're open all night. Especially tonight.",
+      "We're open through the night, and it has been a long one already.",
     ], { wander: 0 }],
     ['townswoman', 8, 44, TOWN_Y, [
       'That road goes south to Twoson.',

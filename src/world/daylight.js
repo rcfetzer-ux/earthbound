@@ -7,9 +7,9 @@
  * relationship adjustable — sun, sky fill, ambient, sky gradient, fog, the post
  * grade, and whether the street lamps are burning.
  *
- * Dusk is the default because it is what the game's own fiction says: the
- * meteorite came down tonight, the police are still on the hill, and the
- * townspeople keep telling you nobody has slept.
+ * Afternoon is the default: a low warm key with the palette still fully open,
+ * which is where the bright chalky colours the art leans on read best. Dusk and
+ * night are a keypress away and are where the meteorite is at its best.
  */
 import * as THREE from 'three';
 
@@ -74,7 +74,7 @@ export const TIMES = {
     smokeTint: 0xc0a898,
   },
 
-  /** The evening the meteorite fell. */
+  /** The evening after the meteorite fell — lamps on, palette going blue. */
   dusk: {
     label: 'EVENING',
     sun: { color: 0xffa868, intensity: 1.8, elevation: 17, azimuth: 52 },
@@ -106,7 +106,7 @@ export const TIMES = {
 };
 
 export const TIME_ORDER = ['day', 'golden', 'dusk', 'night'];
-export const DEFAULT_TIME = 'dusk';
+export const DEFAULT_TIME = 'golden';
 
 export function timePreset(name) {
   return TIMES[name] ?? TIMES[DEFAULT_TIME];

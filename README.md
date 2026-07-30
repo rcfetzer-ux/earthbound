@@ -95,8 +95,9 @@ sun plays against a cool hemisphere fill, and the post pass grades the two ends
 further apart — shadows toward the sky's blue, highlights toward the sun's
 amber. Four presets (`src/world/daylight.js`) drive sun, fill, ambient, sky
 gradient, fog, that grade, the character tint, and whether the street lamps are
-burning; `T` cycles them. Dusk is the default because it is what the writing
-already said: the meteorite fell tonight and nobody in town has slept.
+burning; `T` cycles them. Afternoon is the default — a low warm key with the
+palette still fully open — while dusk and night bring the lamps up and are where
+the meteorite hill looks its best.
 
 Street lamps are additive billboards — a halo at the head and a warm pool on the
 ground — rather than real lights, which at this resolution is indistinguishable

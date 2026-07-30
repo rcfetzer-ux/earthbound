@@ -755,7 +755,7 @@ export function buildDrugstore() {
   const keeper = new Actor('shopkeeper', { x: 3.0, y: 0, z: -5.0, speed: 1.2 });
   keeper.lines = [
     'Welcome! Bandages, cola, umbrellas — if you need it, we have it.',
-    'Busy night. Everyone came in at once when that thing came down.',
+    'Busy since dawn. Everyone came in at once when that thing came down.',
   ];
   keeper.home = new THREE.Vector3(3.0, 0, -5.0);
   keeper.wanderRadius = 1.2;
