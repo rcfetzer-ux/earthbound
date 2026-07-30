@@ -8,6 +8,7 @@ import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js'
 import { P } from '../core/palette.js';
 import { T, repeated, rng } from '../core/tex.js';
 import { Ground, Solids } from './collision.js';
+import { timePreset, sunVector, DEFAULT_TIME } from './daylight.js';
 
 export class Zone {
   constructor(name, label) {
@@ -70,13 +71,13 @@ void main() {
 }
 `;
 
-export function addSky(scene) {
+export function addSky(scene, preset = timePreset(DEFAULT_TIME)) {
   const geo = new THREE.SphereGeometry(300, 24, 16);
   const mat = new THREE.ShaderMaterial({
     uniforms: {
-      uTop: { value: new THREE.Color(P.skyHigh) },
-      uMid: { value: new THREE.Color(P.sky) },
-      uHorizon: { value: new THREE.Color(P.skyLow) },
+      uTop: { value: new THREE.Color(preset.sky.top) },
+      uMid: { value: new THREE.Color(preset.sky.mid) },
+      uHorizon: { value: new THREE.Color(preset.sky.horizon) },
     },
     vertexShader: SKY_VERT,
     fragmentShader: SKY_FRAG,
@@ -86,7 +87,13 @@ export function addSky(scene) {
   });
   const sky = new THREE.Mesh(geo, mat);
   sky.name = 'sky';
+  sky.userData.dynamic = true;
   scene.add(sky);
+  sky.applyTime = (p) => {
+    mat.uniforms.uTop.value.set(p.sky.top);
+    mat.uniforms.uMid.value.set(p.sky.mid);
+    mat.uniforms.uHorizon.value.set(p.sky.horizon);
+  };
   return sky;
 }
 
@@ -95,16 +102,17 @@ export function addSky(scene) {
  * always turned toward the middle of town. Flat cut-out shapes read far more
  * like the original's skies than any amount of 3D geometry would.
  */
-export function addClouds(scene, seed = 7) {
+export function addClouds(scene, seed = 7, preset = timePreset(DEFAULT_TIME)) {
   const rand = rng(seed);
   const group = new THREE.Group();
   const tex = T.cloud();
+  const tint = new THREE.Color(preset.cloudTint);
   for (let i = 0; i < 18; i++) {
     const w = 46 + rand() * 44;
     const m = new THREE.Mesh(
       new THREE.PlaneGeometry(w, w * 0.5),
       new THREE.MeshBasicMaterial({
-        map: tex, transparent: true, opacity: 0.94, depthWrite: false, fog: false,
+        map: tex, color: tint, transparent: true, opacity: 0.94, depthWrite: false, fog: false,
       }),
     );
     const a = (i / 18) * Math.PI * 2 + rand() * 0.3;
@@ -121,6 +129,9 @@ export function addClouds(scene, seed = 7) {
   scene.add(group);
   return {
     group,
+    applyTime(p) {
+      for (const c of group.children) c.material.color.set(p.cloudTint);
+    },
     update(dt) {
       for (const c of group.children) {
         // drift around the dome so they never leave the sky
@@ -138,12 +149,15 @@ export function addClouds(scene, seed = 7) {
  * Outdoor lighting: broad hemisphere fill plus one hard sun whose shadow
  * frustum follows the player so shadow texels stay big and crunchy.
  */
-export function addOutdoorLight(scene) {
-  const hemi = new THREE.HemisphereLight(0xd8f0ff, 0x86b45c, 1.15);
+export function addOutdoorLight(scene, preset = timePreset(DEFAULT_TIME)) {
+  // The hemisphere light is the cool half of the warm/cool contrast: it fills
+  // the shadows with sky colour instead of just darkening them.
+  const hemi = new THREE.HemisphereLight(preset.hemi.sky, preset.hemi.ground, preset.hemi.intensity);
   scene.add(hemi);
 
-  const sun = new THREE.DirectionalLight(0xfff6e0, 1.35);
-  sun.position.set(26, 44, 20);
+  const sun = new THREE.DirectionalLight(preset.sun.color, preset.sun.intensity);
+  let offset = sunVector(preset);
+  sun.position.copy(offset);
   sun.castShadow = true;
   // 1024 over a 60-unit frustum is ~17 texels per world unit: crisp enough for
   // hard-edged shadows, and a quarter of the fill of a 2048 map.
@@ -160,15 +174,25 @@ export function addOutdoorLight(scene) {
   scene.add(sun);
   scene.add(sun.target);
 
-  const amb = new THREE.AmbientLight(0xe8f2ff, 0.32);
+  const amb = new THREE.AmbientLight(preset.ambient.color, preset.ambient.intensity);
   scene.add(amb);
 
   return {
-    sun, hemi,
+    sun, hemi, amb,
     follow(p) {
       sun.target.position.set(p.x, p.y, p.z);
-      sun.position.set(p.x + 26, p.y + 44, p.z + 20);
+      sun.position.set(p.x + offset.x, p.y + offset.y, p.z + offset.z);
       sun.target.updateMatrixWorld();
+    },
+    applyTime(p) {
+      hemi.color.set(p.hemi.sky);
+      hemi.groundColor.set(p.hemi.ground);
+      hemi.intensity = p.hemi.intensity;
+      sun.color.set(p.sun.color);
+      sun.intensity = p.sun.intensity;
+      amb.color.set(p.ambient.color);
+      amb.intensity = p.ambient.intensity;
+      offset = sunVector(p);
     },
   };
 }

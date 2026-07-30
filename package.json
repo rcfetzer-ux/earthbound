@@ -10,7 +10,8 @@
     "preview": "vite preview --port 4173",
     "shot": "node tools/screenshot.mjs",
     "test": "node tools/playtest.mjs",
-    "perf": "node tools/perf.mjs"
+    "perf": "node tools/perf.mjs",
+    "times": "node tools/times.mjs"
   },
   "devDependencies": {
     "vite": "^7.0.0",

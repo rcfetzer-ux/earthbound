@@ -17,6 +17,7 @@ import { T, repeated, signTexture } from '../core/tex.js';
 import {
   Zone, addSky, addClouds, addOutdoorLight, addBackdrop, terrace, pave, kerb, stairs,
 } from './zone.js';
+import { timePreset, DEFAULT_TIME } from './daylight.js';
 import {
   building, tree, hedge, fence, lamp, signPost, car, bush, flowerPatch,
   box, flatMat, mat, decal,
@@ -31,19 +32,32 @@ export const HILL_Y = 5.6;
 
 const BOUNDS = { x0: -58, x1: 58, z0: -70, z1: 58 };
 
-export function buildOnett() {
+export function buildOnett(timeName = DEFAULT_TIME) {
   const zone = new Zone('onett', 'ONETT');
   zone.music = 'town';
   const ctx = { solids: zone.solids, doors: zone.doors };
   const S = zone.scene;
 
-  S.fog = new THREE.Fog(P.fog, 90, 260);
-  addSky(S);
-  const clouds = addClouds(S, 11);
-  const light = addOutdoorLight(S);
+  const preset = timePreset(timeName);
+  S.fog = new THREE.Fog(preset.fog.color, preset.fog.near, preset.fog.far);
+  const sky = addSky(S, preset);
+  const clouds = addClouds(S, 11, preset);
+  const light = addOutdoorLight(S, preset);
   zone.light = light;
   addBackdrop(S, { radius: 132, seed: 5 });
   zone.onUpdate((dt) => clouds.update(dt));
+
+  // Re-light the whole zone when the time of day changes.
+  zone.applyTime = (p) => {
+    sky.applyTime(p);
+    clouds.applyTime(p);
+    light.applyTime(p);
+    S.fog.color.set(p.fog.color);
+    S.fog.near = p.fog.near;
+    S.fog.far = p.fog.far;
+    // Smoke is unlit, so it has to be tinted by hand or it glows after dark.
+    for (const m of zone.smokeMats ?? []) m.color.set(p.smokeTint);
+  };
 
   // ======================================================================
   // Ground
@@ -561,9 +575,12 @@ function buildMeteoriteHill(zone, S, ctx) {
   const smokeMat = new THREE.MeshBasicMaterial({
     color: 0xb8aab0, transparent: true, opacity: 0.35, depthWrite: false,
   });
+  zone.smokeMats = [];
   const puffs = [];
   for (let i = 0; i < 8; i++) {
-    const p = new THREE.Mesh(new THREE.SphereGeometry(0.8 + Math.random() * 0.5, 6, 5), smokeMat.clone());
+    const pm = smokeMat.clone();
+    zone.smokeMats.push(pm);
+    const p = new THREE.Mesh(new THREE.SphereGeometry(0.8 + Math.random() * 0.5, 6, 5), pm);
     p.position.set(43 + Math.random() * 2 - 1, HILL_Y + 2 + i * 1.1, -58 + Math.random() * 2 - 1);
     p.userData = { dynamic: true, base: HILL_Y + 2 + i * 1.1, phase: Math.random() * 6.28 };
     S.add(p);

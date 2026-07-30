@@ -108,7 +108,7 @@ export function gable(w, h, d, material, axis = 'x') {
  * radial UVs smear a shingle texture into concentric rings, while these four
  * triangles each get a clean 0..1 mapping.
  */
-export function hipRoof(w, h, d, material) {
+export function hipRoof(w, h, d, material, capColor = null) {
   const hw = w / 2;
   const hd = d / 2;
   const apex = [0, h, 0];
@@ -142,9 +142,14 @@ export function hipRoof(w, h, d, material) {
   // concentric contour lines rather than a roof.
   const out = new THREE.Group();
   out.add(m);
-  const capMat = new THREE.MeshLambertMaterial({
-    color: (material.color ?? new THREE.Color(0x999999)).clone().multiplyScalar(0.7),
-  });
+  // Ridge caps take the roof's own colour. Deriving them from material.color
+  // gave white caps, since a textured roof's tint is plain white — which read as
+  // bright piping across the roof once the light stopped being neutral.
+  const capMat = capColor
+    ? flatMat(capColor)
+    : new THREE.MeshLambertMaterial({
+      color: (material.color ?? new THREE.Color(0x999999)).clone().multiplyScalar(0.7),
+    });
   const apexV = new THREE.Vector3(...apex);
   for (const c of corners) {
     const cv = new THREE.Vector3(...c);
@@ -166,6 +171,28 @@ export function decal(w, h, material, { x = 0, y = 0, z = 0, ry = 0, rx = 0 } = 
   m.position.set(x, y, z);
   m.rotation.set(rx, ry, 0);
   return m;
+}
+
+/**
+ * Windows share two materials — "dark" and "lit" — so the whole town can switch
+ * on at dusk by swapping one texture, even after the static bake has merged the
+ * geometry (the bake groups by material, so shared materials stay switchable).
+ */
+const windowMats = { plain: null, lit: null };
+
+export function windowMaterial(alwaysLit = false) {
+  const key = alwaysLit ? 'lit' : 'plain';
+  if (!windowMats[key]) {
+    windowMats[key] = new THREE.MeshLambertMaterial({ map: T.window(alwaysLit) });
+  }
+  return windowMats[key];
+}
+
+/** Turn every ordinary window in town on or off. */
+export function setWindowsLit(lit) {
+  if (!windowMats.plain) return;
+  windowMats.plain.map = T.window(lit);
+  windowMats.plain.needsUpdate = true;
 }
 
 const SIDE_ROT = { south: 0, north: Math.PI, east: Math.PI / 2, west: -Math.PI / 2 };
@@ -243,7 +270,7 @@ export function building(spec, ctx) {
     g.add(box(0.3, ph, rd, pMat, rw / 2 - 0.15, wallH + 0.3, 0));
   } else if (roofType === 'hip') {
     const rm = mat(repeated(T.shingle(roof, roof), rw / 2.4, roofH / 1.6), 0xffffff);
-    const r = hipRoof(rw, roofH, rd, rm);
+    const r = hipRoof(rw, roofH, rd, rm, shade(roof, -0.32));
     r.position.y = wallH;
     g.add(r);
     g.add(box(rw + 0.1, 0.22, rd + 0.1, flatMat(shade(roof, -0.3)), 0, wallH - 0.11, 0));
@@ -288,7 +315,7 @@ export function building(spec, ctx) {
   for (const win of windows) {
     const ww = win.w ?? 1.5;
     const wh = win.h ?? 1.6;
-    const m = new THREE.MeshLambertMaterial({ map: T.window(win.lit ?? false) });
+    const m = windowMaterial(win.lit ?? false);
     const q = decal(ww, wh, m);
     placeOnSide(win.side, win.offset ?? 0, q, (win.y ?? 1.1) + wh / 2);
     // sill + shutters give the flat wall some relief
@@ -480,7 +507,7 @@ export function lamp(x, z, y, ctx) {
   g.add(cage);
   const glass = new THREE.Mesh(
     new THREE.CylinderGeometry(0.25, 0.19, 0.5, 6),
-    new THREE.MeshBasicMaterial({ color: 0xfff2c8 }),
+    lampGlassMaterial(),
   );
   glass.position.y = 4.66;
   g.add(glass);
@@ -488,8 +515,58 @@ export function lamp(x, z, y, ctx) {
   capMesh.position.y = 5.08;
   g.add(capMesh);
   g.add(box(0.1, 0.16, 0.1, flatMat('#4e5563'), 0, 5.2, 0));
+
+  // Halo around the head and a warm pool on the ground. Both are additive
+  // billboards/decals rather than real lights: a dozen point lights would cost
+  // far more than this and look no better at this resolution.
+  const halo = new THREE.Mesh(
+    new THREE.PlaneGeometry(3.2, 3.2),
+    new THREE.MeshBasicMaterial({
+      map: T.glow(), transparent: true, blending: THREE.AdditiveBlending,
+      depthWrite: false, fog: false,
+    }),
+  );
+  halo.position.y = 4.66;
+  halo.userData.dynamic = true;
+  halo.renderOrder = 3;
+  g.add(halo);
+
+  const pool = new THREE.Mesh(
+    new THREE.PlaneGeometry(9, 9),
+    new THREE.MeshBasicMaterial({
+      map: T.lightPool(), transparent: true, blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    }),
+  );
+  pool.rotation.x = -Math.PI / 2;
+  pool.position.y = 0.06;
+  pool.userData.dynamic = true;
+  pool.renderOrder = 1;
+  g.add(pool);
+
+  halo.visible = false;
+  pool.visible = false;
+  lampRegistry.push({ halo, pool });
   if (ctx?.solids) ctx.solids.circle(x, z, 0.26, 'lamp');
   return g;
+}
+
+/** Every lamp head shares one material, so they all switch at once. */
+let lampGlass = null;
+const lampRegistry = [];
+
+export function lampGlassMaterial() {
+  if (!lampGlass) lampGlass = new THREE.MeshBasicMaterial({ color: 0x9fa294 });
+  return lampGlass;
+}
+
+/** Turn the street lighting on or off across the whole town. */
+export function setLampsLit(lit) {
+  lampGlassMaterial().color.set(lit ? 0xfff2c8 : 0x9fa294);
+  for (const l of lampRegistry) {
+    l.halo.visible = lit;
+    l.pool.visible = lit;
+  }
 }
 
 export function signPost(x, z, y, text, ctx, { bg = '#e8e0c8', fg = '#3a3040', rotation = 0 } = {}) {

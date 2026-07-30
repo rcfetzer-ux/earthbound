@@ -25,6 +25,9 @@ uniform float uSat;
 uniform float uVignette;
 uniform float uFlash;      // white/black flash amount (screen transitions)
 uniform vec3  uFlashColor;
+uniform vec3  uShadowTint; // split-tone: cool end
+uniform vec3  uHighTint;   // split-tone: warm end
+uniform float uGrade;      // how much of the split tone to apply
 varying vec2 vUv;
 
 // 4x4 ordered dither, evaluated in low-res pixel space so the pattern enlarges
@@ -56,6 +59,12 @@ void main() {
   // gentle saturation lift — the original art is very chalky-bright
   float l = dot(c, vec3(0.299, 0.587, 0.114));
   c = mix(vec3(l), c, uSat);
+
+  // Split tone: shadows toward the sky's colour, highlights toward the sun's.
+  // Lighting alone gets you halfway; grading the two ends apart is what stops a
+  // scene reading as neutral CG.
+  vec3 tone = mix(uShadowTint, uHighTint, smoothstep(0.12, 0.78, l));
+  c *= mix(vec3(1.0), tone, uGrade);
 
   // dither, then quantize
   float d = bayer4(vUv * uRes) - 0.5;
@@ -117,6 +126,9 @@ export class PixelRenderer {
         uVignette: { value: 0.14 },
         uFlash: { value: 0 },
         uFlashColor: { value: new THREE.Color(1, 1, 1) },
+        uShadowTint: { value: new THREE.Vector3(1, 1, 1) },
+        uHighTint: { value: new THREE.Vector3(1, 1, 1) },
+        uGrade: { value: 0 },
       },
       vertexShader: POST_VERT,
       fragmentShader: POST_FRAG,
@@ -173,6 +185,16 @@ export class PixelRenderer {
       this.internalHeight = Math.max(200, Math.round(this.internalHeight * 0.78));
       this.resize();
     }
+  }
+
+  /**
+   * Apply a time-of-day grade: shadows pulled toward one colour, highlights
+   * toward another.
+   */
+  setGrade({ shadow, highlight, amount }) {
+    this.postMaterial.uniforms.uShadowTint.value.set(...shadow);
+    this.postMaterial.uniforms.uHighTint.value.set(...highlight);
+    this.postMaterial.uniforms.uGrade.value = amount;
   }
 
   /** Screen flash used for door transitions / hits. */

@@ -19,6 +19,7 @@ npm run dev      # http://localhost:5173
 | `npm test` | headless playtest — 34 checks (movement, stairs, doors, dialogue, geometry audit, mobile, failure path) |
 | `npm run shot` | screenshot tour of the whole level into `shots/` |
 | `npm run perf` | render-cost probe (scene complexity, fps, shadow/fill breakdown) |
+| `npm run times` | contact sheets of each vantage point under all four lighting presets |
 
 ## Publishing
 
@@ -37,7 +38,8 @@ that the game is live at `https://<user>.github.io/<repo>/`.
 Once the feature branch merges, the second branch entry in the workflow can go.
 
 **Controls** — `WASD`/arrows walk, `Shift` runs, `Space` or `Z` talks, `Q`/`E`
-turn the camera, `C` recentres, `M` mutes. Walk into a door to go inside.
+turn the camera, `C` recentres, `T` cycles the time of day, `M` mutes. Walk into
+a door to go inside.
 
 ## Mobile
 
@@ -87,6 +89,19 @@ mipmapped minification: crunchy up close, stable in the distance.
 up in a shader-local array, since some mobile GL drivers baulk at indexing one
 with a non-constant. The camera widens its field of view on narrow windows so a
 portrait phone doesn't get a 15° slit of world.
+
+**Light, not lamps.** The scene is never lit neutrally. A warm key from a low
+sun plays against a cool hemisphere fill, and the post pass grades the two ends
+further apart — shadows toward the sky's blue, highlights toward the sun's
+amber. Four presets (`src/world/daylight.js`) drive sun, fill, ambient, sky
+gradient, fog, that grade, the character tint, and whether the street lamps are
+burning; `T` cycles them. Dusk is the default because it is what the writing
+already said: the meteorite fell tonight and nobody in town has slept.
+
+Street lamps are additive billboards — a halo at the head and a warm pool on the
+ground — rather than real lights, which at this resolution is indistinguishable
+and far cheaper. Windows switch on through a single shared material, so the
+whole town lights up at once even after the static bake has merged the geometry.
 
 **2.5D.** A narrow-FOV perspective camera at a fixed 33° pitch approximates the
 original's oblique projection while letting buildings have real volume.

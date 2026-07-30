@@ -12,6 +12,8 @@ import { moveActor } from './world/collision.js';
 import { buildOnett } from './world/onett.js';
 import { bakeStatic } from './world/zone.js';
 import { INTERIOR_BUILDERS } from './world/interiors.js';
+import { TIMES, TIME_ORDER, DEFAULT_TIME, timePreset } from './world/daylight.js';
+import { setWindowsLit, setLampsLit } from './world/build.js';
 import { Actor } from './entities/actor.js';
 
 const canvas = document.getElementById('view');
@@ -84,10 +86,13 @@ const cam = new FollowCamera(renderer.aspect);
 const WALK_SPEED = 4.4;
 const RUN_SPEED = 7.4;
 
+/** Time of day. Dusk by default: the meteorite fell tonight. */
+let timeName = DEFAULT_TIME;
+
 const zones = new Map();
 function getZone(name) {
   if (zones.has(name)) return zones.get(name);
-  const z = name === 'onett' ? buildOnett() : INTERIOR_BUILDERS[name]?.();
+  const z = name === 'onett' ? buildOnett(timeName) : INTERIOR_BUILDERS[name]?.();
   if (!z) throw new Error(`unknown zone: ${name}`);
   // Collapse the pile of little primitives into a few big buffers.
   z.baked = bakeStatic(z.scene);
@@ -129,10 +134,7 @@ function enterZone(name, spawnKey, { silent = false } = {}) {
   cam.first = true;
   cam.update(0.016, player.pos, zone.occluders);
 
-  // sprites pick up the room's ambience so nobody glows in a dark arcade
-  const tint = zone.interior ? (zone.name === 'arcade' ? 0xc0b4d8 : 0xf4ead8) : 0xffffff;
-  player.setTint(tint);
-  for (const n of zone.npcs) n.setTint(tint);
+  applyTint(zone);
 
   // A spawn point normally sits right in the doorway you came through, which
   // means it also sits inside that door's trigger. Suppress any trigger the
@@ -149,6 +151,33 @@ function enterZone(name, spawnKey, { silent = false } = {}) {
   hud.showPlace(zone.label);
   audio.playMusic(zone.music);
   if (!silent) audio.sfx('enter');
+}
+
+/**
+ * Characters are unlit billboards, so the world's light never reaches them —
+ * they get tinted by hand to sit in whatever the current light is.
+ */
+function applyTint(zone) {
+  const t = zone.interior
+    ? (zone.name === 'arcade' ? 0xc0b4d8 : 0xf4ead8)
+    : timePreset(timeName).spriteTint;
+  player.setTint(t);
+  for (const n of zone.npcs) n.setTint(t);
+}
+
+/** Switch the time of day across every zone that has been built. */
+function setTime(name) {
+  if (!TIMES[name]) return;
+  timeName = name;
+  const p = timePreset(name);
+  for (const z of zones.values()) z.applyTime?.(p);
+  renderer.setGrade(p.grade);
+  setWindowsLit(p.lamps);
+  setLampsLit(p.lamps);
+  if (game.zone) {
+    applyTint(game.zone);
+    hud.showPlace(`${p.label}`);
+  }
 }
 
 function beginTransition(door) {
@@ -431,6 +460,7 @@ function start() {
     const titleEl = document.getElementById('title');
     titleEl.classList.add('gone');
     setTimeout(() => titleEl.classList.add('hidden'), 460);
+    setTime(timeName);
     enterZone('onett', 'start', { silent: true });
     if (input.touch) {
       document.getElementById('touch')?.classList.remove('hidden');
@@ -470,6 +500,9 @@ startBtn.addEventListener('touchstart', (e) => { e.preventDefault(); start(); },
 window.addEventListener('keydown', (e) => {
   if (!running && (e.code === 'Space' || e.code === 'Enter')) start();
   if (e.code === 'KeyM') audio.setMuted(!audio.muted);
+  if (e.code === 'KeyT') {
+    setTime(TIME_ORDER[(TIME_ORDER.indexOf(timeName) + 1) % TIME_ORDER.length]);
+  }
 });
 
 // Build the town up front so the first frame after START is instant. Wrapped,
@@ -483,4 +516,7 @@ try {
 requestAnimationFrame(frame);
 
 // expose a little for screenshot tooling / debugging
-window.__game = { game, player, cam, renderer, zones, enterZone, start, WALK_SPEED, RUN_SPEED };
+window.__game = {
+  game, player, cam, renderer, zones, enterZone, start, WALK_SPEED, RUN_SPEED,
+  setTime, get timeName() { return timeName; },
+};

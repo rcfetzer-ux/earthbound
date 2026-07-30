@@ -585,6 +585,33 @@ export const T = {
       }
     }, { transparent: true }),
 
+  /**
+   * Warm pool cast by a street lamp. Additively blended onto the ground, which
+   * is far cheaper than a real light and reads exactly like the reference: a
+   * soft circle of warmth on unmown grass.
+   */
+  lightPool: () =>
+    make('lightPool', 64, 64, (ctx, w, h) => {
+      const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+      g.addColorStop(0, 'rgba(255, 226, 150, 0.95)');
+      g.addColorStop(0.35, 'rgba(255, 200, 120, 0.5)');
+      g.addColorStop(0.72, 'rgba(220, 150, 90, 0.16)');
+      g.addColorStop(1, 'rgba(180, 120, 70, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+    }, { mag: THREE.LinearFilter }),
+
+  /** Soft halo around a lit lamp head or a bright window. */
+  glow: () =>
+    make('glow', 64, 64, (ctx, w, h) => {
+      const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+      g.addColorStop(0, 'rgba(255, 240, 190, 0.85)');
+      g.addColorStop(0.4, 'rgba(255, 214, 130, 0.28)');
+      g.addColorStop(1, 'rgba(255, 200, 110, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+    }, { mag: THREE.LinearFilter }),
+
   /** Soft radial blob used as a fake character shadow. */
   blob: () =>
     make('blob', 32, 32, (ctx, w, h) => {
