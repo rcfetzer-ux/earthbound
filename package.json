@@ -1,0 +1,22 @@
+{
+  "name": "earthbound-onett",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A 2.5D/3D reimagining of Onett, the first town of EarthBound.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4173",
+    "shot": "node tools/screenshot.mjs",
+    "test": "node tools/playtest.mjs",
+    "perf": "node tools/perf.mjs"
+  },
+  "devDependencies": {
+    "vite": "^7.0.0",
+    "playwright": "^1.50.0"
+  },
+  "dependencies": {
+    "three": "^0.185.0"
+  }
+}

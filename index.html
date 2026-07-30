@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>ONETT — a 2.5D homage</title>
+    <link rel="icon" type="image/png" href="./favicon.png" />
+    <link rel="stylesheet" href="/src/ui/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="view"></canvas>
+
+      <!-- Dialogue / text window, EarthBound-style framed box -->
+      <div id="dialogue" class="hidden">
+        <div class="frame">
+          <div class="who"></div>
+          <div class="text"></div>
+          <div class="more">▼</div>
+        </div>
+      </div>
+
+      <div id="hud">
+        <div id="place">ONETT</div>
+      </div>
+
+      <div id="hint" class="hidden"></div>
+
+      <div id="title">
+        <div class="tstack">
+          <h1>ONETT</h1>
+          <p class="sub">a 2.5D homage to EarthBound</p>
+          <p class="keys">
+            <b>WASD</b> or <b>Arrows</b> walk &nbsp;·&nbsp; <b>Shift</b> run<br />
+            <b>Space</b> or <b>Z</b> talk &nbsp;·&nbsp; walk into a door to go inside<br />
+            <b>Q</b> <b>E</b> turn the camera &nbsp;·&nbsp; <b>C</b> recentre &nbsp;·&nbsp; <b>M</b> mute
+          </p>
+          <button id="start">PRESS START</button>
+          <p class="tiny">
+            All art, music and sound in this project are generated procedurally from code.
+            No assets from the original game are used.
+          </p>
+        </div>
+      </div>
+
+      <div id="fade"></div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
