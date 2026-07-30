@@ -10,7 +10,11 @@ name: Deploy to Pages
 
 on:
   push:
-    branches: [main]
+    # The work currently lives on the feature branch, so publish from either.
+    # Once it merges, dropping the second entry is all that's needed.
+    branches:
+      - main
+      - claude/earthbound-2d5-environment-yevfc5
   workflow_dispatch:
 
 permissions:

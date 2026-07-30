@@ -26,14 +26,15 @@ The build is a static bundle with no server side and no external requests, and
 `vite.config.js` sets `base: './'`, so it runs from any path — including the
 project subpath GitHub Pages serves from.
 
-`.github/workflows/pages.yml` builds and deploys on every push to `main`. It
-needs one manual step first: **Settings → Pages → Build and deployment →
-Source: GitHub Actions**. After that the game is live at
-`https://<user>.github.io/<repo>/`.
+`.github/workflows/pages.yml` builds and deploys on every push to `main` or to
+the `claude/earthbound-2d5-environment-yevfc5` feature branch, and can be run by
+hand from the Actions tab.
 
-To publish from this feature branch instead of `main`, add its name to the
-workflow's `on.push.branches`, or trigger the workflow by hand from the Actions
-tab.
+**One manual step is required first**, and nothing deploys until it is done:
+**Settings → Pages → Build and deployment → Source: "GitHub Actions"**. After
+that the game is live at `https://<user>.github.io/<repo>/`.
+
+Once the feature branch merges, the second branch entry in the workflow can go.
 
 **Controls** — `WASD`/arrows walk, `Shift` runs, `Space` or `Z` talks, `Q`/`E`
 turn the camera, `C` recentres, `M` mutes. Walk into a door to go inside.
