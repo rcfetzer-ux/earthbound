@@ -16,7 +16,7 @@ npm run dev      # http://localhost:5173
 |---|---|
 | `npm run dev` | Vite dev server |
 | `npm run build` | static bundle in `dist/` |
-| `npm test` | headless playtest — 23 checks (movement, stairs, doors, dialogue, geometry audit) |
+| `npm test` | headless playtest — 34 checks (movement, stairs, doors, dialogue, geometry audit, mobile, failure path) |
 | `npm run shot` | screenshot tour of the whole level into `shots/` |
 | `npm run perf` | render-cost probe (scene complexity, fps, shadow/fill breakdown) |
 
@@ -37,7 +37,23 @@ tab.
 
 **Controls** — `WASD`/arrows walk, `Shift` runs, `Space` or `Z` talks, `Q`/`E`
 turn the camera, `C` recentres, `M` mutes. Walk into a door to go inside.
-Touch: left half of the screen is a stick, right half is the action button.
+
+## Mobile
+
+It runs on phones and tablets. On-screen controls appear automatically on touch
+devices: an analogue thumb pad on the left (push to the outer ring to run), an
+**A** button, and two camera nudges. Both orientations are covered by the test
+suite, but landscape shows about twice as much of the town — portrait can only be
+widened so far before the perspective goes fisheye, so the game suggests turning
+the phone once and then leaves you alone.
+
+Requirements are the renderer's: **WebGL2**, meaning iOS 15+ or any current
+Android browser. If the page can't start it now says why on screen — no WebGL2,
+a refused context, or an unexpected error — rather than leaving PRESS START
+wired to nothing.
+
+If a device still fails, the useful details are the browser, the OS version, and
+anything in the on-screen message.
 
 ## Every asset is generated from code
 
@@ -65,6 +81,11 @@ then blows up to the window with nearest-neighbour sampling. The dither happens
 in display space (the post pass does the sRGB transfer itself), so the pattern
 lands on the values you actually see. Textures use nearest magnification with
 mipmapped minification: crunchy up close, stable in the distance.
+
+**Portability.** The dither kernel is computed arithmetically rather than looked
+up in a shader-local array, since some mobile GL drivers baulk at indexing one
+with a non-constant. The camera widens its field of view on narrow windows so a
+portrait phone doesn't get a 15° slit of world.
 
 **2.5D.** A narrow-FOV perspective camera at a fixed 33° pitch approximates the
 original's oblique projection while letting buildings have real volume.
@@ -133,6 +154,7 @@ src/
     actor.js           billboard sprite actor with walk cycle
   ui/
     hud.js             dialogue window, place banner, prompts
+    touch.js           on-screen thumb pad and buttons
     style.css          UI chrome
 tools/
   screenshot.mjs       vantage-point tour, doubles as a smoke test

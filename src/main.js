@@ -7,6 +7,7 @@ import { Input } from './core/input.js';
 import { FollowCamera } from './core/camera.js';
 import { AudioEngine } from './core/audio.js';
 import { HUD } from './ui/hud.js';
+import { initTouchControls } from './ui/touch.js';
 import { moveActor } from './world/collision.js';
 import { buildOnett } from './world/onett.js';
 import { bakeStatic } from './world/zone.js';
@@ -14,6 +15,66 @@ import { INTERIOR_BUILDERS } from './world/interiors.js';
 import { Actor } from './entities/actor.js';
 
 const canvas = document.getElementById('view');
+
+/**
+ * Show a readable failure instead of a dead button.
+ *
+ * Everything below used to run at module scope, so a single throw — no WebGL2 on
+ * an older phone, a shader the driver won't compile — left the page looking
+ * fine, the START button wired to nothing, and no clue as to why.
+ */
+let reported = false;
+
+function fatal(err, hint = '') {
+  // The first report is the specific one. Rethrowing to halt the module trips
+  // the global error handler, which would otherwise paper over it.
+  if (reported) return;
+  reported = true;
+  const el = document.getElementById('boot-error');
+  if (!el) return;
+  const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+  el.querySelector('.what').textContent = msg;
+  el.querySelector('.hint').textContent = hint;
+  el.classList.remove('hidden');
+  document.getElementById('title')?.classList.add('hidden');
+  console.error('[onett] boot failed:', err);
+}
+
+/** three.js needs WebGL2; say so plainly rather than throwing something cryptic. */
+function webgl2Support() {
+  try {
+    if (!window.WebGL2RenderingContext) return 'missing';
+    const c = document.createElement('canvas');
+    const gl = c.getContext('webgl2');
+    if (!gl) return 'blocked';
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+    return 'ok';
+  } catch {
+    return 'blocked';
+  }
+}
+
+let running = false;
+let started = false;
+
+window.addEventListener('error', (ev) => {
+  if (!running) fatal(ev.error ?? ev.message, 'This happened while starting up.');
+});
+window.addEventListener('unhandledrejection', (ev) => {
+  if (!running) fatal(ev.reason, 'This happened while starting up.');
+});
+
+const support = webgl2Support();
+if (support !== 'ok') {
+  fatal(
+    new Error(support === 'missing' ? 'This browser has no WebGL2.' : 'WebGL2 is present but the browser refused a context.'),
+    support === 'missing'
+      ? 'The renderer needs WebGL2 (iOS 15+, or any current desktop browser). On iOS, Settings → Safari → Advanced → Experimental Features → WebGL 2.0 must be on.'
+      : 'This usually means hardware acceleration is off, the tab is low on memory, or a data-saver/lite mode is blocking WebGL. Try closing other tabs or another browser.',
+  );
+  throw new Error('WebGL2 unavailable');
+}
+
 const renderer = new PixelRenderer(canvas, { internalHeight: 336, levels: 30 });
 const input = new Input();
 const audio = new AudioEngine();
@@ -224,7 +285,6 @@ function updateNpcs(zone, dt) {
 // --- main loop -------------------------------------------------------------
 
 let last = performance.now();
-let running = false;
 
 function frame(now) {
   requestAnimationFrame(frame);
@@ -338,7 +398,8 @@ function frame(now) {
     if (nearDoor) hud.hint(`${nearDoor.label ?? 'DOOR'}`);
     else {
       const it = findInteraction();
-      hud.hint(it ? `<b>SPACE</b> ${it.kind === 'npc' ? 'talk' : 'look'}` : '');
+      const key = input.touch ? 'A' : 'SPACE';
+      hud.hint(it ? `<b>${key}</b> ${it.kind === 'npc' ? 'talk' : 'look'}` : '');
     }
   } else hud.hint('');
 
@@ -362,24 +423,63 @@ window.addEventListener('resize', () => {
 });
 
 function start() {
-  audio.init();
-  const titleEl = document.getElementById('title');
-  titleEl.classList.add('gone');
-  setTimeout(() => titleEl.classList.add('hidden'), 460);
-  enterZone('onett', 'start', { silent: true });
-  running = true;
-  last = performance.now();
-  audio.playMusic('town');
+  if (started) return;
+  started = true;
+  try {
+    // Audio must be created inside the gesture or mobile browsers keep it muted.
+    audio.init();
+    const titleEl = document.getElementById('title');
+    titleEl.classList.add('gone');
+    setTimeout(() => titleEl.classList.add('hidden'), 460);
+    enterZone('onett', 'start', { silent: true });
+    if (input.touch) {
+      document.getElementById('touch')?.classList.remove('hidden');
+      maybeSuggestLandscape();
+    }
+    running = true;
+    last = performance.now();
+    audio.playMusic('town');
+  } catch (err) {
+    started = false;
+    fatal(err, 'The town failed to build. Please report this along with your browser and device.');
+  }
 }
 
-document.getElementById('start').addEventListener('click', start);
+initTouchControls(input, {
+  camLeft: () => cam.nudgeYaw(Math.PI / 8),
+  camRight: () => cam.nudgeYaw(-Math.PI / 8),
+});
+
+/** Portrait works, but landscape shows about twice as much town. Say so once. */
+function maybeSuggestLandscape() {
+  if (window.innerWidth >= window.innerHeight) return;
+  const el = document.getElementById('rotate');
+  if (!el) return;
+  el.classList.remove('hidden', 'fading');
+  setTimeout(() => el.classList.add('fading'), 4200);
+  setTimeout(() => el.classList.add('hidden'), 4800);
+}
+
+// Click covers every platform, but bind pointerdown too: some mobile browsers
+// swallow the click when a touch handler runs first. start() is idempotent.
+const startBtn = document.getElementById('start');
+startBtn.addEventListener('click', start);
+startBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); start(); });
+startBtn.addEventListener('touchstart', (e) => { e.preventDefault(); start(); }, { passive: false });
+
 window.addEventListener('keydown', (e) => {
   if (!running && (e.code === 'Space' || e.code === 'Enter')) start();
   if (e.code === 'KeyM') audio.setMuted(!audio.muted);
 });
 
-// Prebuild the town so the first frame after START is instant.
-getZone('onett');
+// Build the town up front so the first frame after START is instant. Wrapped,
+// because a failure here is exactly the kind that used to be invisible.
+try {
+  getZone('onett');
+} catch (err) {
+  fatal(err, 'The town failed to build. Please report this along with your browser and device.');
+  throw err;
+}
 requestAnimationFrame(frame);
 
 // expose a little for screenshot tooling / debugging

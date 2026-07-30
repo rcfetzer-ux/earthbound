@@ -253,3 +253,173 @@ html, body {
 }
 
 #fade.on { opacity: 1; }
+
+/* --- on-screen touch controls -------------------------------------------- */
+/*
+ * Revealed only when a touch is detected. The pad is analog: the further from
+ * the centre you push, the faster you walk, and the outer ring runs — so there
+ * is no separate run button to hunt for.
+ */
+
+#touch {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: min(46vh, 260px);
+  z-index: 18;
+  pointer-events: none;
+  padding: 0 max(14px, env(safe-area-inset-left)) max(18px, env(safe-area-inset-bottom));
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+#pad {
+  position: relative;
+  width: min(38vw, 168px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(18, 12, 32, 0.42);
+  border: 3px solid rgba(248, 244, 232, 0.55);
+  box-shadow: 0 0 0 3px rgba(58, 42, 72, 0.5);
+  pointer-events: auto;
+}
+
+#pad .nub {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 38%;
+  height: 38%;
+  margin: -19% 0 0 -19%;
+  border-radius: 50%;
+  background: rgba(248, 244, 232, 0.85);
+  border: 3px solid #2a2030;
+  transition: background 90ms linear;
+}
+
+#pad.run .nub { background: var(--accent); }
+
+#pad .tick {
+  position: absolute;
+  color: rgba(248, 244, 232, 0.65);
+  font-size: 12px;
+  line-height: 1;
+}
+
+#pad .tick.up { top: 6px; left: 50%; transform: translateX(-50%); }
+#pad .tick.down { bottom: 6px; left: 50%; transform: translateX(-50%); }
+#pad .tick.left { left: 6px; top: 50%; transform: translateY(-50%); }
+#pad .tick.right { right: 6px; top: 50%; transform: translateY(-50%); }
+
+#tbuttons {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 10px;
+  align-items: end;
+  justify-items: center;
+  pointer-events: none;
+}
+
+.tbtn {
+  pointer-events: auto;
+  font-family: inherit;
+  font-weight: 700;
+  color: #120c20;
+  background: var(--frame);
+  border: 3px solid #2a2030;
+  border-radius: 50%;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tbtn.big {
+  grid-column: 1 / span 2;
+  width: min(23vw, 96px);
+  aspect-ratio: 1;
+  font-size: clamp(20px, 5vw, 30px);
+  letter-spacing: 0.05em;
+  background: var(--accent);
+}
+
+.tbtn.small {
+  width: min(14vw, 58px);
+  aspect-ratio: 1;
+  font-size: clamp(13px, 3.4vw, 18px);
+}
+
+.tbtn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35); filter: brightness(1.1); }
+
+/* Keep the dialogue box clear of the thumb controls on small screens. */
+@media (max-height: 560px), (max-width: 620px) {
+  #dialogue { bottom: auto; top: 12px; }
+  #hint { bottom: auto; top: 64px; }
+}
+
+/* --- boot failure panel -------------------------------------------------- */
+
+#boot-error {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: radial-gradient(ellipse at 50% 35%, #2a1c4a 0%, #120c20 60%, #07050e 100%);
+}
+
+#boot-error .panel {
+  max-width: 520px;
+  background: var(--back);
+  border: 4px solid var(--frame);
+  box-shadow: 0 0 0 4px var(--shadow), 0 0 0 7px #0d0916;
+  padding: 22px 26px;
+}
+
+#boot-error h2 {
+  margin: 0 0 14px;
+  font-size: clamp(17px, 3vw, 23px);
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+#boot-error .what {
+  margin: 0 0 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #fff;
+  word-break: break-word;
+}
+
+#boot-error .hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #b6aecb;
+}
+
+/* --- portrait nudge ------------------------------------------------------- */
+
+#rotate {
+  position: absolute;
+  left: 50%;
+  top: 14px;
+  transform: translateX(-50%);
+  z-index: 19;
+  background: rgba(18, 12, 32, 0.92);
+  border: 3px solid var(--frame);
+  box-shadow: 0 0 0 3px var(--shadow);
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: center;
+  pointer-events: none;
+  transition: opacity 400ms ease;
+}
+
+#rotate.fading { opacity: 0; }

@@ -40,43 +40,25 @@ export class Input {
     });
     window.addEventListener('blur', () => this.down.clear());
 
-    // --- touch: left half = virtual stick, right half = action -------------
+    // --- touch -------------------------------------------------------------
+    // The on-screen controls in ui/touch.js drive these; nothing here listens to
+    // raw touches, so the pad and buttons can't fight each other for a gesture.
     this.touchVec = new THREE.Vector2();
-    this._touchId = null;
-    const onStart = (e) => {
-      for (const t of e.changedTouches) {
-        if (t.clientX < window.innerWidth * 0.5 && this._touchId === null) {
-          this._touchId = t.identifier;
-          this._touchOrigin = { x: t.clientX, y: t.clientY };
-        } else {
-          this.pressed.set('action', (this.pressed.get('action') ?? 0) + 1);
-        }
-      }
-    };
-    const onMove = (e) => {
-      for (const t of e.changedTouches) {
-        if (t.identifier !== this._touchId) continue;
-        const dx = t.clientX - this._touchOrigin.x;
-        const dy = t.clientY - this._touchOrigin.y;
-        const r = 44;
-        this.touchVec.set(
-          THREE.MathUtils.clamp(dx / r, -1, 1),
-          THREE.MathUtils.clamp(dy / r, -1, 1),
-        );
-      }
-    };
-    const onEnd = (e) => {
-      for (const t of e.changedTouches) {
-        if (t.identifier === this._touchId) {
-          this._touchId = null;
-          this.touchVec.set(0, 0);
-        }
-      }
-    };
-    window.addEventListener('touchstart', onStart, { passive: true });
-    window.addEventListener('touchmove', onMove, { passive: true });
-    window.addEventListener('touchend', onEnd, { passive: true });
-    window.addEventListener('touchcancel', onEnd, { passive: true });
+    this.touchRun = false;
+    /** True once any touch has been seen — used to reveal the on-screen pad. */
+    this.touch = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+    window.addEventListener('touchstart', () => { this.touch = true; }, { passive: true, once: true });
+  }
+
+  /** Called by the on-screen pad. `x` right, `y` up, each in [-1, 1]. */
+  setTouchAxis(x, y, run = false) {
+    this.touchVec.set(x, y);
+    this.touchRun = run;
+  }
+
+  /** Called by the on-screen buttons. */
+  press(action) {
+    this.pressed.set(action, (this.pressed.get(action) ?? 0) + 1);
   }
 
   /** Screen-space movement axis: x = right, y = up. */
@@ -88,13 +70,17 @@ export class Input {
     if (this.down.has('up')) y += 1;
     if (this.down.has('down')) y -= 1;
     x += this.touchVec.x;
-    y -= this.touchVec.y;
+    y += this.touchVec.y;
     this.axis.set(x, y);
     if (this.axis.lengthSq() > 1) this.axis.normalize();
     return this.axis;
   }
 
-  held(a) { return this.down.has(a); }
+  held(a) {
+    // Pushing the on-screen pad to its outer ring counts as running.
+    if (a === 'run' && this.touchRun) return true;
+    return this.down.has(a);
+  }
 
   /** Consume one queued press of this action. */
   once(a) {

@@ -8,7 +8,7 @@
  *
  *   node tools/playtest.mjs [--url http://localhost:5173]
  */
-import { chromium } from 'playwright';
+import { chromium, devices } from 'playwright';
 import { existsSync } from 'node:fs';
 
 const args = process.argv.slice(2);
@@ -258,6 +258,80 @@ await page.keyboard.press('KeyQ');
 await page.waitForTimeout(200);
 const yawAfter = await page.evaluate(() => window.__game.cam.desiredYaw);
 check('camera can be turned', Math.abs(yawAfter - yawBefore) > 0.1, `${yawBefore.toFixed(2)} → ${yawAfter.toFixed(2)}`);
+
+// --- 13. mobile: on-screen controls, both orientations --------------------
+// The reported symptom was "nothing happens when I hit Press Start", so this
+// exercises the whole touch path: start by tap, walk with the pad, talk with A.
+for (const [label, w, h] of [['landscape', 844, 390], ['portrait', 390, 844]]) {
+  const ctx = await browser.newContext({
+    viewport: { width: w, height: h }, hasTouch: true, isMobile: true,
+    deviceScaleFactor: 2, userAgent: devices['iPhone 13'].userAgent,
+  });
+  const mp = await ctx.newPage();
+  const mErrs = [];
+  mp.on('pageerror', (e) => mErrs.push(e.message));
+  await mp.goto(URL, { waitUntil: 'networkidle' });
+  await mp.waitForTimeout(700);
+  await mp.tap('#start');
+  await mp.waitForTimeout(1400);
+
+  const st = await mp.evaluate(() => ({
+    zone: window.__game?.game.zone?.name ?? null,
+    controls: !document.getElementById('touch').classList.contains('hidden'),
+    hFov: (() => {
+      const c = window.__game.cam.camera;
+      return +(2 * Math.atan(Math.tan((c.fov * Math.PI) / 360) * c.aspect) * 180 / Math.PI).toFixed(1);
+    })(),
+  }));
+  check(`mobile ${label}: starts on tap`, st.zone === 'onett', `zone=${st.zone}`);
+  check(`mobile ${label}: on-screen controls appear`, st.controls);
+  // A portrait window would otherwise squeeze the view to a ~15° slit. Portrait
+  // is still tighter than landscape — that is geometry, not a bug — so the bar
+  // is what a phone held upright can actually give.
+  check(`mobile ${label}: usable horizontal view`, st.hFov >= 27, `${st.hFov}° across`);
+
+  const padBox = await mp.locator('#pad').boundingBox();
+  const before = await mp.evaluate(() => +window.__game.player.pos.z.toFixed(2));
+  await mp.mouse.move(padBox.x + padBox.width / 2, padBox.y + padBox.height / 2);
+  await mp.mouse.down();
+  await mp.mouse.move(padBox.x + padBox.width / 2, padBox.y + padBox.height * 0.06, { steps: 4 });
+  await mp.waitForTimeout(1200);
+  const after = await mp.evaluate(() => +window.__game.player.pos.z.toFixed(2));
+  await mp.mouse.up();
+  check(`mobile ${label}: pad walks the character`, after < before - 0.8, `z ${before} → ${after}`);
+
+  await mp.evaluate(() => {
+    const g = window.__game;
+    const npc = g.game.zone.npcs[0];
+    g.player.pos.set(npc.pos.x, npc.pos.y, npc.pos.z + 1.1);
+    g.player.dir = 'up';
+    g.player.syncTransform();
+  });
+  await mp.waitForTimeout(300);
+  await mp.locator('#btn-a').tap();
+  await mp.waitForTimeout(600);
+  const talked = await mp.evaluate(() => !document.getElementById('dialogue').classList.contains('hidden'));
+  check(`mobile ${label}: A button talks`, talked);
+  if (mErrs.length) check(`mobile ${label}: no page errors`, false, mErrs.join(' | '));
+  await ctx.close();
+}
+
+// --- 14. an unsupported device gets an explanation, not a dead button -----
+{
+  const ctx = await browser.newContext({ viewport: { width: 800, height: 500 } });
+  const ep = await ctx.newPage();
+  await ep.addInitScript(() => { delete window.WebGL2RenderingContext; });
+  await ep.goto(URL, { waitUntil: 'networkidle' });
+  await ep.waitForTimeout(600);
+  const shown = await ep.evaluate(() => ({
+    visible: !document.getElementById('boot-error').classList.contains('hidden'),
+    what: document.querySelector('#boot-error .what').textContent,
+    hint: document.querySelector('#boot-error .hint').textContent.length,
+  }));
+  check('no WebGL2 → explains itself instead of failing silently',
+    shown.visible && /WebGL2/.test(shown.what) && shown.hint > 40, shown.what);
+  await ctx.close();
+}
 
 await browser.close();
 

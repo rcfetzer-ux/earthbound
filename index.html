@@ -43,7 +43,32 @@
         </div>
       </div>
 
+      <!-- On-screen controls, revealed only when a touch is detected -->
+      <div id="touch" class="hidden">
+        <div id="pad" aria-label="move">
+          <div class="nub"></div>
+          <span class="tick up">▲</span><span class="tick down">▼</span>
+          <span class="tick left">◀</span><span class="tick right">▶</span>
+        </div>
+        <div id="tbuttons">
+          <button id="btn-cam-l" class="tbtn small" aria-label="turn camera left">◀</button>
+          <button id="btn-cam-r" class="tbtn small" aria-label="turn camera right">▶</button>
+          <button id="btn-a" class="tbtn big" aria-label="talk or confirm">A</button>
+        </div>
+      </div>
+
+      <div id="rotate" class="hidden">↻ &nbsp;Turn your phone sideways for a wider view</div>
+
       <div id="fade"></div>
+
+      <!-- Shown only if the game cannot start, so a failure is never silent -->
+      <div id="boot-error" class="hidden">
+        <div class="panel">
+          <h2>ONETT could not start</h2>
+          <p class="what"></p>
+          <p class="hint"></p>
+        </div>
+      </div>
     </div>
     <script type="module" src="/src/main.js"></script>
   </body>

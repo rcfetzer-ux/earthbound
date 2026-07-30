@@ -27,19 +27,19 @@ uniform float uFlash;      // white/black flash amount (screen transitions)
 uniform vec3  uFlashColor;
 varying vec2 vUv;
 
-// 4x4 ordered dither, evaluated in low-res pixel space so the pattern
-// enlarges together with the pixels.
+// 4x4 ordered dither, evaluated in low-res pixel space so the pattern enlarges
+// together with the pixels.
+//
+// Built arithmetically from the 2x2 kernel rather than looked up in an array:
+// some mobile GL drivers are fussy about indexing local arrays with a
+// non-constant, and this is cheaper anyway.
+float bayer2(vec2 a) {
+  a = floor(a);
+  return fract(a.x * 0.5 + a.y * a.y * 0.75);
+}
+
 float bayer4(vec2 p) {
-  vec2 f = floor(mod(p, 4.0));
-  float i = f.x + f.y * 4.0;
-  float m[16];
-  m[0]=0.0;  m[1]=8.0;  m[2]=2.0;  m[3]=10.0;
-  m[4]=12.0; m[5]=4.0;  m[6]=14.0; m[7]=6.0;
-  m[8]=3.0;  m[9]=11.0; m[10]=1.0; m[11]=9.0;
-  m[12]=15.0;m[13]=7.0; m[14]=13.0;m[15]=5.0;
-  float v = 0.0;
-  for (int k = 0; k < 16; k++) { if (float(k) == i) v = m[k]; }
-  return (v + 0.5) / 16.0;
+  return bayer2(p * 0.5) * 0.25 + bayer2(p);
 }
 
 // Linear → display sRGB. The scene is rendered into a linear buffer, so the

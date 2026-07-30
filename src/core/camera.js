@@ -24,20 +24,52 @@ export class FollowCamera {
     this.height = 2.0;         // look-at height above the character's feet
     this.first = true;
     this.shake = 0;
+    this.baseFov = 32;
+    /** Never show less than this much of the world horizontally. */
+    this.minHorizontalFov = 34;
+    /** …but don't go fisheye achieving it. */
+    this.maxFov = 60;
+    /** Pulled back in portrait, where the view is narrow. */
+    this.distanceScale = 1;
   }
 
   setMode(mode) {
     if (mode === 'interior') {
       this.pitch = THREE.MathUtils.degToRad(47);
       this.distance = 19;
-      this.camera.fov = 30;
+      this.baseFov = 30;
       this.height = 1.5;
     } else {
       this.pitch = THREE.MathUtils.degToRad(33);
       this.distance = 33;
-      this.camera.fov = 32;
+      this.baseFov = 32;
       this.height = 2.0;
     }
+    this._applyFov();
+  }
+
+  /**
+   * three's fov is vertical, so a portrait window would squeeze the horizontal
+   * view to a slit — about 15° on a phone held upright. Below a minimum
+   * horizontal angle we widen the vertical fov to compensate, capped so the
+   * perspective doesn't go fisheye.
+   */
+  _applyFov() {
+    const base = this.baseFov ?? 32;
+    const aspect = this.camera.aspect || 1;
+    const vRad = THREE.MathUtils.degToRad(base);
+    const hRad = 2 * Math.atan(Math.tan(vRad / 2) * aspect);
+    const minH = THREE.MathUtils.degToRad(this.minHorizontalFov);
+    let fov = base;
+    if (hRad < minH) {
+      const needed = 2 * Math.atan(Math.tan(minH / 2) / aspect);
+      fov = Math.min(this.maxFov, THREE.MathUtils.radToDeg(needed));
+    }
+    this.camera.fov = fov;
+    // In portrait there is only so much widening can do, so also stand further
+    // back: a longer lens fits more town in and flattens the perspective, which
+    // suits the oblique look anyway.
+    this.distanceScale = aspect < 0.8 ? 1.28 : aspect < 1.05 ? 1.12 : 1;
     this.camera.updateProjectionMatrix();
   }
 
@@ -101,7 +133,7 @@ export class FollowCamera {
     const look = this.smoothTarget.clone();
     look.y += this.height;
 
-    const d = this.distance;
+    const d = this.distance * this.distanceScale;
     const horiz = Math.cos(this.pitch) * d;
     const vert = Math.sin(this.pitch) * d;
     _wanted.set(
@@ -122,6 +154,6 @@ export class FollowCamera {
 
   resize(aspect) {
     this.camera.aspect = aspect;
-    this.camera.updateProjectionMatrix();
+    this._applyFov();
   }
 }
