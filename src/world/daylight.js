@@ -67,7 +67,8 @@ export const TIMES = {
     ambient: { color: 0xd0dcff, intensity: 0.28 },
     sky: { top: '#4a90cc', mid: '#9cc6e4', horizon: '#ffd7a6' },
     fog: { color: '#e8c9a2', near: 92, far: 250 },
-    grade: { shadow: [0.86, 0.93, 1.18], highlight: [1.12, 1.03, 0.88], amount: 0.5 },
+    // Cool shadows, but not so cool that grey tarmac in shade reads violet.
+    grade: { shadow: [0.90, 0.95, 1.11], highlight: [1.12, 1.03, 0.88], amount: 0.46 },
     lamps: false,
     spriteTint: 0xffeedd,
     cloudTint: 0xffe6c8,

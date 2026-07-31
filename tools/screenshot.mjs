@@ -23,17 +23,20 @@ const ONLY = arg('only', null);
 
 /** [name, zone, spawnOrPos, camYawDegrees] */
 const SHOTS = [
-  ['01-front-door', 'onett', { x: -16, z: -36, y: 2.4 }, 0],
-  ['02-shelf-street', 'onett', { x: -2, z: -28, y: 2.4 }, 20],
-  ['03-stairs-down', 'onett', { x: 0, z: -18, y: 1.6 }, 0],
-  ['04-main-street', 'onett', { x: -20, z: 12, y: 0 }, 0],
-  ['05-shops', 'onett', { x: 14, z: 8, y: 0 }, -25],
-  ['06-civic-row', 'onett', { x: 0, z: 20, y: 0 }, 180],
-  ['07-hotel', 'onett', { x: 45, z: 7, y: 0 }, 0],
-  ['08-meteorite', 'onett', { x: 40, z: -50, y: 5.6 }, 0],
-  ['09-south-road', 'onett', { x: 0, z: 48, y: 0 }, 0],
-  ['10-drugstore-front', 'onett', { x: -40, z: 7, y: 0 }, 0],
-  ['19-camera-occlusion', 'onett', { x: -44, z: 6.5, y: 0 }, 0],
+  ['01-front-door', 'onett', { x: 33, z: -30, y: 5.8 }, 0],
+  ['02-shelf-street', 'onett', { x: 44, z: -21.5, y: 5.8 }, 20],
+  ['03-stairs-down', 'onett', { x: 57, z: -9, y: 5.8 }, 0],
+  ['04-main-street', 'onett', { x: -20, z: 10.5, y: 2.8 }, 0],
+  ['05-shops', 'onett', { x: -13, z: 5.5, y: 2.8 }, -25],
+  ['06-civic-row', 'onett', { x: -12, z: 16.8, y: 2.8 }, 180],
+  ['07-hotel', 'onett', { x: 43, z: 5.5, y: 2.8 }, 0],
+  ['08-meteorite', 'onett', { x: 48, z: -60, y: 9.6 }, 0],
+  ['09-south-road', 'onett', { x: -8, z: 50, y: 0 }, 0],
+  ['10-drugstore-front', 'onett', { x: -46, z: 5.5, y: 2.8 }, 0],
+  ['21-town-sign', 'onett', { x: 0.5, z: -40, y: 5.8 }, 0],
+  ['22-west-stairs', 'onett', { x: -47, z: 30, y: 1.4 }, 0],
+  ['23-hill-track', 'onett', { x: 26, z: -56, y: 7.7 }, 90],
+  ['19-camera-occlusion', 'onett', { x: -46, z: 5.0, y: 2.8 }, 0],
   ['11-home-inside', 'nessHouse', 'front', 0],
   ['12-bedroom', 'nessBedroom', 'stairs', 0],
   ['13-drugstore-inside', 'drugstore', 'front', 0],
@@ -106,9 +109,9 @@ if (!ONLY || '18-dialogue'.includes(ONLY)) {
     const g = window.__game;
     g.enterZone('onett', 'start');
     const npc = g.game.zone.npcs.find((n) => n.kind === 'neighborKid') ?? g.game.zone.npcs[0];
-    npc.pos.set(-16, 2.4, -34.5);
+    npc.pos.set(42.5, 5.8, -28.7);
     npc.syncTransform();
-    g.player.pos.set(-16, 2.4, -33.0);
+    g.player.pos.set(42.5, 5.8, -27.2);
     g.player.facePoint(npc.pos.x, npc.pos.z);
     g.player.yaw = g.player.targetYaw;
     g.player.model.rotation.y = g.player.yaw;
@@ -127,7 +130,7 @@ if (!ONLY || '20-odd-font'.includes(ONLY)) {
   await page.evaluate(() => {
     const g = window.__game;
     g.enterZone('onett', 'start');
-    g.player.pos.set(43, 5.6, -53.5);
+    g.player.pos.set(48, 9.6, -62.5);
     g.player.syncTransform();
     g.cam.desiredYaw = 0;
     g.cam.yaw = 0;

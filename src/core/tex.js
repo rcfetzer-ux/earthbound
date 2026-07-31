@@ -284,6 +284,64 @@ export const T = {
       speckle(ctx, w, h, shade(color, 0.12), 110, rand);
     }),
 
+  /** Rough cobble, for the base course of a shopfront. */
+  cobble: () =>
+    make('cobble', 32, 32, (ctx, w, h, rand) => {
+      ctx.fillStyle = '#6f6a63';
+      ctx.fillRect(0, 0, w, h);
+      for (let y = 0; y < h; y += 5) {
+        for (let x = (y % 10 ? -3 : 0); x < w; x += 7) {
+          const c = ['#8e8880', '#7b756d', '#9c958a', '#6a655e'][Math.floor(rand() * 4)];
+          ctx.fillStyle = c;
+          ctx.fillRect(x + 1, y + 1, 5, 3);
+          ctx.fillStyle = shade(c, 0.2);
+          ctx.fillRect(x + 1, y + 1, 5, 1);
+        }
+      }
+      speckle(ctx, w, h, '#57534d', 90, rand);
+    }),
+
+  /** Dressed stone blocks — the base course under a painted wall. */
+  stoneCourse: () =>
+    make('stoneCourse', 32, 32, (ctx, w, h, rand) => {
+      ctx.fillStyle = '#c9c0ae';
+      ctx.fillRect(0, 0, w, h);
+      for (let row = 0, y = 0; y < h; y += 8, row++) {
+        for (let x = row % 2 ? -6 : 0; x < w; x += 12) {
+          const c = ['#d6cdba', '#c2b9a6', '#cdc4b1'][Math.floor(rand() * 3)];
+          ctx.fillStyle = c;
+          ctx.fillRect(x + 1, y + 1, 10, 6);
+          ctx.fillStyle = shade(c, -0.18);
+          ctx.fillRect(x + 1, y + 6, 10, 1);
+        }
+      }
+      speckle(ctx, w, h, '#a89f8e', 70, rand);
+    }),
+
+  /** Awning stripes, for shopfronts. */
+  awningStripe: (a, b, key) =>
+    make(`awning-${key}`, 32, 32, (ctx, w, h) => {
+      for (let x = 0; x < w; x += 8) {
+        ctx.fillStyle = a;
+        ctx.fillRect(x, 0, 4, h);
+        ctx.fillStyle = b;
+        ctx.fillRect(x + 4, 0, 4, h);
+      }
+      ctx.fillStyle = 'rgba(0,0,0,0.16)';
+      ctx.fillRect(0, h - 3, w, 3);
+    }),
+
+  /** Checked awning, as on the drug store. */
+  awningCheck: (a, b, key) =>
+    make(`awningcheck-${key}`, 32, 32, (ctx, w, h) => {
+      for (let y = 0; y < h; y += 8) {
+        for (let x = 0; x < w; x += 8) {
+          ctx.fillStyle = ((x / 8) + (y / 8)) % 2 === 0 ? a : b;
+          ctx.fillRect(x, y, 8, 8);
+        }
+      }
+    }),
+
   brick: () =>
     make('brick', 32, 32, (ctx, w, h, rand) => {
       ctx.fillStyle = P.brickMortar;
@@ -302,20 +360,33 @@ export const T = {
 
   // --- roofs --------------------------------------------------------------
 
+  /**
+   * Scalloped shingles.
+   *
+   * The old version varied by ±0.1, which the 30-level quantizer flattened
+   * back into one colour: every roof in town read as a painted slab. These
+   * courses are bigger, rounder and much higher contrast, so the pattern
+   * survives both the low-resolution buffer and the mipmap chain.
+   */
   shingle: (color, key) =>
     make(`shingle-${key}`, 32, 32, (ctx, w, h, rand) => {
-      ctx.fillStyle = color;
+      ctx.fillStyle = shade(color, -0.3);
       ctx.fillRect(0, 0, w, h);
-      const rh = 5;
+      const rh = 8;
+      const tw = 8;
       for (let row = 0, y = 0; y < h; y += rh, row++) {
-        const off = row % 2 ? -5 : 0;
-        for (let x = off; x < w; x += 10) {
-          ctx.fillStyle = rand() > 0.3 ? color : shade(color, -0.1);
-          ctx.fillRect(x, y, 9, rh - 1);
-          ctx.fillStyle = shade(color, -0.15);
-          ctx.fillRect(x, y + rh - 1, 10, 1);
-          ctx.fillStyle = shade(color, 0.1);
-          ctx.fillRect(x, y, 9, 1);
+        const off = row % 2 ? -tw / 2 : 0;
+        for (let x = off; x < w; x += tw) {
+          // a fan of three widths makes the bottom edge scalloped, not straight
+          const tone = rand() > 0.32 ? color : shade(color, -0.12);
+          ctx.fillStyle = tone;
+          ctx.fillRect(x + 1, y, tw - 2, rh - 1);
+          ctx.fillRect(x + 2, y + rh - 1, tw - 4, 1);
+          // lit top lip and shaded underside: the two lines that read as depth
+          ctx.fillStyle = shade(tone, 0.26);
+          ctx.fillRect(x + 1, y, tw - 2, 1);
+          ctx.fillStyle = shade(tone, -0.34);
+          ctx.fillRect(x + 1, y + rh - 2, tw - 2, 1);
         }
       }
     }),

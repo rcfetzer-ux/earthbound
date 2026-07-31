@@ -17,8 +17,10 @@ export const P = {
   dirt: '#c39a5e',
   dirtDark: '#a67c45',
 
-  road: '#8e8aa6',
-  roadDark: '#75718f',
+  // Tarmac reads warm-grey, not lilac. The afternoon grade tints shadows blue,
+  // so anything that starts violet finishes properly purple on screen.
+  road: '#8d8b92',
+  roadDark: '#74727c',
   roadLine: '#f2e9a8',
   walk: '#d8d2c4',
   walkDark: '#bdb6a6',

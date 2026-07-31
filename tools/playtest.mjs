@@ -118,30 +118,31 @@ check('running outpaces walking', speeds.run > speeds.walk * 1.3,
   `${speeds.walk} vs ${speeds.run} units/s`);
 
 // --- 4. stairs change height ----------------------------------------------
-await teleport('onett', 0, -11, 0);           // town side, foot of the main stairs
+// The east flight, from main street up to the residential shelf.
+await teleport('onett', 57, 4, 2.8);
 before = await state();
-after = await holdUntil('ArrowUp', (v) => v.y > 2.2, 8000);
+after = await holdUntil('ArrowUp', (v) => v.y > 5.2, 8000);
 check('stairs climb from town to the shelf', after.y > before.y + 1.4,
   `y ${before.y} → ${after.y} (z ${before.z} → ${after.z})`);
 
 // --- 5. cliffs are walls ---------------------------------------------------
-await teleport('onett', 20, -18, 0);          // town level, under the shelf cliff
+await teleport('onett', 20, -5, 2.8);         // main street, under the shelf cliff
 before = await state();
 await hold('ArrowUp', 1600);
 after = await state();
-check('cannot walk up a cliff face', after.y < 1.0 && after.z > -22,
+check('cannot walk up a cliff face', after.y < 4.0 && after.z > -9,
   `ended at z=${after.z} y=${after.y}`);
 
 // --- 6. buildings are solid -----------------------------------------------
-await teleport('onett', -37, 6.5, 0);         // blank stretch of the drug store front,
-                                              // clear of lamp posts and bushes
+await teleport('onett', -9, 6.5, 2.8);        // blank stretch of the library front,
+                                              // clear of doors, lamp posts and bushes
 before = await state();
-after = await holdUntil('ArrowUp', (v) => v.z < 4.1, 4000);
-check('cannot walk through a shop wall', after.z > 3.4 && after.z < 4.6,
-  `walked from z=${before.z} to z=${after.z}, wall at 3.5`);
+after = await holdUntil('ArrowUp', (v) => v.z < 4.4, 4000);
+check('cannot walk through a shop wall', after.z > 3.0 && after.z < 5.0,
+  `walked from z=${before.z} to z=${after.z}, wall at 3.0`);
 
 // --- 7. doors: into the house and back out --------------------------------
-await teleport('onett', -17.5, -36.0, 2.4);   // on the path outside the front door
+await teleport('onett', 32.8, -30.2, 5.8);    // on the path outside the front door
 s = await holdUntil('ArrowUp', (v) => v.zone === 'nessHouse', 6000);
 check('front door leads inside', s.zone === 'nessHouse', `zone=${s.zone}`);
 
@@ -248,7 +249,7 @@ for (let i = 0; i < 12 && !closed; i++) {
 check('dialogue pages through and closes', closed);
 
 // --- 11. frame rate -------------------------------------------------------
-await teleport('onett', -20, 12, 0);
+await teleport('onett', -20, 10.5, 2.8);
 const fps = await page.evaluate(() => new Promise((resolve) => {
   let frames = 0;
   const t0 = performance.now();
@@ -300,6 +301,15 @@ for (const [label, w, h] of [['landscape', 844, 390], ['portrait', 390, 844]]) {
   // is what a phone held upright can actually give.
   check(`mobile ${label}: usable horizontal view`, st.hFov >= 27, `${st.hFov}° across`);
 
+  // Move off the doorstep first: the spawn faces the front door, so walking
+  // north from there measures a room change rather than a step.
+  await mp.evaluate(() => {
+    const g = window.__game;
+    g.player.pos.set(0, 0, 44);
+    g.player.syncTransform();
+    g.game.doorCooldown = 0.4;
+  });
+  await mp.waitForTimeout(200);
   const padBox = await mp.locator('#pad').boundingBox();
   const before = await mp.evaluate(() => +window.__game.player.pos.z.toFixed(2));
   await mp.mouse.move(padBox.x + padBox.width / 2, padBox.y + padBox.height / 2);

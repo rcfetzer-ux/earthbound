@@ -165,6 +165,42 @@ export function hipRoof(w, h, d, material, capColor = null) {
   return out;
 }
 
+/**
+ * A box whose top is smaller than its base.
+ *
+ * Perfectly rectangular prisms are what makes a town read as programmer art.
+ * A couple of percent of taper is barely measurable but reads as hand-built,
+ * and it catches the light differently on every face.
+ */
+export function taperedBox(w, h, d, taper = 0.04) {
+  const bx = w / 2;
+  const bz = d / 2;
+  const tx = bx * (1 - taper);
+  const tz = bz * (1 - taper);
+  const verts = [];
+  const norms = [];
+  const uvs = [];
+  const quad = (a, b, c, dd, n, uvScale) => {
+    const push = (p, u, v) => { verts.push(...p); norms.push(...n); uvs.push(u, v); };
+    push(a, 0, 0); push(b, uvScale, 0); push(c, uvScale, 1);
+    push(a, 0, 0); push(c, uvScale, 1); push(dd, 0, 1);
+  };
+  const B = [[-bx, 0, bz], [bx, 0, bz], [bx, 0, -bz], [-bx, 0, -bz]];
+  const T2 = [[-tx, h, tz], [tx, h, tz], [tx, h, -tz], [-tx, h, -tz]];
+  // sides, wound so the outside faces out
+  quad(B[0], B[1], T2[1], T2[0], [0, taper, 1], 1);          // +z
+  quad(B[1], B[2], T2[2], T2[1], [1, taper, 0], 1);          // +x
+  quad(B[2], B[3], T2[3], T2[2], [0, taper, -1], 1);         // -z
+  quad(B[3], B[0], T2[0], T2[3], [-1, taper, 0], 1);         // -x
+  quad(T2[0], T2[1], T2[2], T2[3], [0, 1, 0], 1);            // top
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(norms, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  g.normalizeNormals();
+  return g;
+}
+
 /** Thin quad, used for windows, doors, signs and decals. */
 export function decal(w, h, material, { x = 0, y = 0, z = 0, ry = 0, rx = 0 } = {}) {
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), material);
@@ -227,10 +263,21 @@ export function building(spec, ctx) {
     roofType = 'gable', ridge = 'x', roofOverhang = 0.6, roofH = 2.4,
     doors = [], windows = [], sign = null, awning = false, chimney = false,
     trim = null, storeys = 1, solid = true, name = '',
+    // --- facade kit ---
+    base = null,        // stone/cobble course around the foot
+    cornice = null,     // band capping the wall, proud of it
+    pilasters = false,  // vertical strips at the corners
+    signBand = null,    // wide band the sign sits on
+    // --- wonk ---
+    taper = 0.035,      // walls narrow slightly toward the top
+    lean = 0,           // a degree or two off vertical
+    yaw = 0,            // a degree or two off the street grid
   } = spec;
 
   const g = new THREE.Group();
   g.position.set(x, y, z);
+  g.rotation.y = yaw;
+  g.rotation.z = lean;
   g.name = name;
 
   const wallH = h * storeys;
@@ -241,17 +288,49 @@ export function building(spec, ctx) {
   else if (wallTex === 'stucco') wallMap = repeated(T.stucco(wall, wall), w / 3, wallH / 3);
   else wallMap = repeated(T.siding(wall, wall), w / 3, wallH / 1.6);
 
-  const wallMat = mat(wallMap, wallTex === 'brick' ? 0xffffff : 0xffffff);
-  const walls = box(w, wallH, d, wallMat, 0, 0, 0);
+  const wallMat = mat(wallMap);
+  const walls = new THREE.Mesh(taperedBox(w, wallH, d, taper), wallMat);
+  walls.castShadow = true;
+  walls.receiveShadow = true;
   g.add(walls);
 
-  // foundation strip: grounds the building visually
-  const found = box(w + 0.24, 0.34, d + 0.24, mat(repeated(T.concrete(), w / 2, 1), 0xdedad0), 0, -0.02, 0);
-  g.add(found);
+  // --- facade bands ------------------------------------------------------
+  // A wall is rarely one flat plane in the reference art: there is a heavy
+  // course at the foot, a cornice capping it, and often a sign band between.
+  // Those three horizontals are most of what makes a box read as a building.
+  if (base) {
+    const bh = base.h ?? 0.75;
+    const bmap = base.tex === 'cobble'
+      ? repeated(T.cobble(), w / 2.4, bh / 1.2)
+      : repeated(T.stoneCourse(), w / 3, bh / 1.2);
+    g.add(box(w + 0.3, bh, d + 0.3, mat(bmap, base.color ?? 0xffffff), 0, 0, 0));
+  } else {
+    g.add(box(w + 0.22, 0.3, d + 0.22, mat(repeated(T.concrete(), w / 2, 1), 0xdedad0), 0, -0.02, 0));
+  }
+
+  if (cornice) {
+    const cc = typeof cornice === 'string' ? cornice : shade(wall, -0.2);
+    g.add(box(w + 0.5, 0.34, d + 0.5, flatMat(cc), 0, wallH - 0.34, 0));
+    g.add(box(w + 0.34, 0.16, d + 0.34, flatMat(shade(cc, 0.18)), 0, wallH - 0.5, 0));
+  }
+
+  if (pilasters) {
+    const pc = flatMat(shade(wall, 0.16));
+    for (const sx of [-1, 1]) {
+      g.add(box(0.42, wallH - 0.3, 0.42, pc, sx * (w / 2 - 0.1), 0.1, d / 2 - 0.1));
+      g.add(box(0.42, wallH - 0.3, 0.42, pc, sx * (w / 2 - 0.1), 0.1, -d / 2 + 0.1));
+    }
+  }
+
+  if (signBand) {
+    const sb = typeof signBand === 'string' ? signBand : shade(wall, -0.32);
+    const sy = signBand.y ?? (storeys > 1 ? h - 0.5 : wallH - 1.5);
+    g.add(box(w + 0.36, 0.95, d + 0.36, flatMat(sb), 0, sy, 0));
+  }
 
   if (trim) {
     // horizontal band between storeys, or a base skirt
-    const band = box(w + 0.1, 0.3, d + 0.1, flatMat(trim), 0, storeys > 1 ? h : wallH - 0.4, 0);
+    const band = box(w + 0.16, 0.3, d + 0.16, flatMat(trim), 0, storeys > 1 ? h : wallH - 0.4, 0);
     g.add(band);
   }
 
@@ -269,25 +348,41 @@ export function building(spec, ctx) {
     g.add(box(0.3, ph, rd, pMat, -rw / 2 + 0.15, wallH + 0.3, 0));
     g.add(box(0.3, ph, rd, pMat, rw / 2 - 0.15, wallH + 0.3, 0));
   } else if (roofType === 'hip') {
-    const rm = mat(repeated(T.shingle(roof, roof), rw / 2.4, roofH / 1.6), 0xffffff);
+    const rm = mat(repeated(T.shingle(roof, roof), rw / 4.6, roofH / 2.4), 0xffffff);
     const r = hipRoof(rw, roofH, rd, rm, shade(roof, -0.32));
     r.position.y = wallH;
     g.add(r);
     g.add(box(rw + 0.1, 0.22, rd + 0.1, flatMat(shade(roof, -0.3)), 0, wallH - 0.11, 0));
   } else {
-    const rm = mat(repeated(T.shingle(roof, roof), rw / 2.4, roofH / 1.4), 0xffffff);
+    // Big shingles: about a metre to a course, so the pattern is still legible
+    // after the render buffer has thrown three quarters of the pixels away.
+    const rm = mat(repeated(T.shingle(roof, roof), rw / 4.6, roofH / 2.2), 0xffffff);
     const r = gable(rw, roofH, rd, rm, ridge);
     r.position.y = wallH;
+    // a hair off level: nothing in this town was built with a spirit level
+    if (ridge === 'x') r.rotation.z = (spec.roofTilt ?? 0.012);
+    else r.rotation.x = (spec.roofTilt ?? 0.012);
+    // A capping board along the ridge. It is the line that tells you the two
+    // slopes are separate planes rather than one folded sheet.
+    const capMat = flatMat(shade(roof, -0.38));
+    const cap = ridge === 'x'
+      ? box(rw + 0.14, 0.26, 0.5, capMat, 0, roofH, 0)
+      : box(0.5, 0.26, rd + 0.14, capMat, 0, roofH, 0);
+    r.add(cap);
     g.add(r);
     // fascia board under the eaves
-    g.add(box(rw + 0.08, 0.24, rd + 0.08, flatMat(shade(roof, -0.34)), 0, wallH - 0.12, 0));
+    g.add(box(rw + 0.08, 0.28, rd + 0.08, flatMat(shade(roof, -0.34)), 0, wallH - 0.14, 0));
   }
 
   if (chimney) {
     const cm = mat(repeated(T.brick(), 0.8, 1.4), 0xffffff);
-    const c = box(0.9, roofH + 0.9, 0.9, cm, w * 0.26, wallH, ridge === 'x' ? d * 0.1 : 0);
-    g.add(c);
-    g.add(box(1.1, 0.18, 1.1, flatMat('#6a6068'), w * 0.26, wallH + roofH + 0.9, ridge === 'x' ? d * 0.1 : 0));
+    const cz = ridge === 'x' ? d * 0.1 : 0;
+    const stack = new THREE.Group();
+    stack.position.set(w * 0.26, wallH, cz);
+    stack.rotation.z = 0.045;      // every chimney in a cartoon leans
+    stack.add(box(0.85, roofH + 1.0, 0.85, cm, 0, 0, 0));
+    stack.add(box(1.05, 0.2, 1.05, flatMat('#6a6068'), 0, roofH + 1.0, 0));
+    g.add(stack);
   }
 
   // --- openings ----------------------------------------------------------
@@ -393,10 +488,14 @@ export function building(spec, ctx) {
   if (awning) {
     const aw = typeof awning === 'object' ? awning : {};
     const stripes = aw.color ?? P.roofRed;
+    const second = aw.color2 ?? '#f4f0e2';
     const width = aw.w ?? w * 0.75;
+    const cloth = aw.check
+      ? T.awningCheck(stripes, second, `${stripes}${second}`)
+      : T.awningStripe(stripes, second, `${stripes}${second}`);
     const canopy = new THREE.Mesh(
       new THREE.BoxGeometry(width, 0.16, 1.5),
-      mat(repeated(T.tileRoof(stripes, stripes), width / 1.2, 1), 0xffffff),
+      mat(repeated(cloth, width / 1.1, 1), 0xffffff),
     );
     canopy.castShadow = true;
     const side = aw.side ?? 'south';
@@ -410,6 +509,20 @@ export function building(spec, ctx) {
     canopy.rotation.x = nz ? nz * -0.12 : 0;
     canopy.rotation.z = nx ? nx * 0.12 : 0;
     g.add(canopy);
+    // scalloped hem: little tabs along the front edge
+    const tabs = Math.max(3, Math.round(width / 0.55));
+    for (let i = 0; i < tabs; i++) {
+      const t = -width / 2 + (width / tabs) * (i + 0.5);
+      const tab = new THREE.Mesh(
+        new THREE.BoxGeometry(width / tabs - 0.06, 0.26, 0.1),
+        mat(repeated(cloth, 0.4, 0.4), 0xffffff),
+      );
+      tab.position.copy(canopy.position);
+      tab.rotation.copy(canopy.rotation);
+      if (nz) { tab.position.x = t; tab.position.z += nz * 0.72; tab.position.y -= 0.16; }
+      else { tab.position.z = t; tab.position.x += nx * 0.72; tab.position.y -= 0.16; }
+      g.add(tab);
+    }
   }
 
   if (solid && ctx?.solids) {
@@ -457,14 +570,47 @@ export function tree(x, z, y, { scale = 1, leaf = '#3f8f2f', kind = 'round' } = 
   return g;
 }
 
+/**
+ * Hedge — a run of overlapping lumps rather than a green brick.
+ *
+ * The box version was the single most "generic 3D" thing in the town: a hard
+ * rectangular prism with a flat top, repeated down every boundary. Clipping a
+ * row of low-poly spheres into a slightly shorter core gives the same footprint
+ * a bumpy silhouette, which is what a clipped hedge actually looks like from
+ * across a street, and matches the hand-drawn planting in the reference art.
+ */
 export function hedge(x, z, y, w, d, h = 1.15, ctx) {
   const m = mat(repeated(T.hedge(), Math.max(1, w / 1.5), Math.max(1, h / 1.5)), 0xffffff);
   const g = new THREE.Group();
   g.position.set(x, y, z);
-  const b = box(w, h, d, m, 0, 0, 0);
-  g.add(b);
-  // a lighter cap so hedges don't read as flat green slabs
-  g.add(box(w - 0.1, 0.14, d - 0.1, flatMat('#5fb046'), 0, h, 0));
+
+  // the solid core, kept low and narrow so the lumps read as the outline
+  g.add(box(w * 0.86, h * 0.8, d * 0.86, m, 0, 0, 0));
+
+  const along = w >= d ? 'x' : 'z';
+  const span = along === 'x' ? w : d;
+  const thick = along === 'x' ? d : w;
+  const r = Math.max(thick, h) * 0.52;
+  const n = Math.max(2, Math.round(span / (r * 1.25)));
+  const lumpMat = mat(repeated(T.hedge(), 1, 1), 0xffffff);
+  for (let i = 0; i < n; i++) {
+    const t = -span / 2 + (span / n) * (i + 0.5);
+    // deterministic wobble: the same hedge is the same shape every load
+    const k = Math.sin((x + z + i) * 12.9898);
+    const jitter = k - Math.floor(k);
+    const rr = r * (0.86 + jitter * 0.3);
+    const s = new THREE.Mesh(new THREE.SphereGeometry(rr, 7, 5), lumpMat);
+    s.position.set(
+      along === 'x' ? t : (jitter - 0.5) * thick * 0.2,
+      h * 0.72 + (jitter - 0.5) * h * 0.16,
+      along === 'x' ? (jitter - 0.5) * thick * 0.2 : t,
+    );
+    s.scale.y = 0.78;
+    s.castShadow = true;
+    s.receiveShadow = true;
+    g.add(s);
+  }
+
   if (ctx?.solids) ctx.solids.bounds(x - w / 2, z - d / 2, x + w / 2, z + d / 2, 'hedge');
   return g;
 }
