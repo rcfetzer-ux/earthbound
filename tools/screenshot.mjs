@@ -109,7 +109,9 @@ if (!ONLY || '18-dialogue'.includes(ONLY)) {
     npc.pos.set(-16, 2.4, -34.5);
     npc.syncTransform();
     g.player.pos.set(-16, 2.4, -33.0);
-    g.player.dir = 'up';
+    g.player.facePoint(npc.pos.x, npc.pos.z);
+    g.player.yaw = g.player.targetYaw;
+    g.player.model.rotation.y = g.player.yaw;
     g.player.syncTransform();
     g.game.doorCooldown = 999;
   });

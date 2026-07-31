@@ -43,7 +43,8 @@ const state = () => page.evaluate(() => {
     x: +g.player.pos.x.toFixed(2),
     y: +g.player.pos.y.toFixed(2),
     z: +g.player.pos.z.toFixed(2),
-    dir: g.player.dir,
+    yaw: +g.player.yaw.toFixed(2),
+    targetYaw: +g.player.targetYaw.toFixed(2),
     dialogue: !document.getElementById('dialogue').classList.contains('hidden'),
     npcs: g.game.zone.npcs.length,
     doors: g.game.zone.doors.length,
@@ -99,7 +100,9 @@ await teleport('onett', 0, 44, 0);   // open stretch of the south road
 let before = await state();
 let after = await holdUntil('ArrowRight', (v) => v.x > before.x + 2, 4000);
 check('walks east', after.x > before.x + 2, `x ${before.x} → ${after.x}`);
-check('faces the way it walks', after.dir === 'right', after.dir);
+// facing is world-space now: +X is a yaw of +90 degrees
+check('faces the way it walks', Math.abs(after.targetYaw - Math.PI / 2) < 0.2,
+  `targetYaw ${after.targetYaw}`);
 
 before = after;
 after = await holdUntil('ArrowDown', (v) => v.z > before.z + 2, 4000);
@@ -217,7 +220,9 @@ await page.evaluate(() => {
   // stand right next to the first NPC and face them
   const npc = g.game.zone.npcs[0];
   g.player.pos.set(npc.pos.x, npc.pos.y, npc.pos.z + 1.1);
-  g.player.dir = 'up';
+  g.player.facePoint(npc.pos.x, npc.pos.z);
+    g.player.yaw = g.player.targetYaw;
+    g.player.model.rotation.y = g.player.yaw;
   g.player.syncTransform();
 });
 await page.waitForTimeout(250);
@@ -304,7 +309,9 @@ for (const [label, w, h] of [['landscape', 844, 390], ['portrait', 390, 844]]) {
     const g = window.__game;
     const npc = g.game.zone.npcs[0];
     g.player.pos.set(npc.pos.x, npc.pos.y, npc.pos.z + 1.1);
-    g.player.dir = 'up';
+    g.player.facePoint(npc.pos.x, npc.pos.z);
+    g.player.yaw = g.player.targetYaw;
+    g.player.model.rotation.y = g.player.yaw;
     g.player.syncTransform();
   });
   await mp.waitForTimeout(300);

@@ -14,7 +14,7 @@ import { bakeStatic } from './world/zone.js';
 import { INTERIOR_BUILDERS } from './world/interiors.js';
 import { TIMES, TIME_ORDER, DEFAULT_TIME, timePreset } from './world/daylight.js';
 import { setWindowsLit, setLampsLit } from './world/build.js';
-import { Actor } from './entities/actor.js';
+import { Actor, DIR_YAW } from './entities/actor.js';
 
 const canvas = document.getElementById('view');
 
@@ -126,15 +126,15 @@ function enterZone(name, spawnKey, { silent = false } = {}) {
   player.pos.set(sp.x, sp.y ?? 0, sp.z);
   const grounded = zone.ground.sample(sp.x, sp.z, sp.y ?? 0);
   if (grounded !== null) player.pos.y = grounded;
-  player.dir = sp.dir ?? 'down';
+  player.yaw = DIR_YAW[sp.dir ?? 'down'] ?? 0;
+  player.targetYaw = player.yaw;
+  player.model.rotation.y = player.yaw;
   player.syncTransform();
 
   cam.setMode(zone.interior ? 'interior' : 'exterior');
   cam.resetYaw();
   cam.first = true;
   cam.update(0.016, player.pos, zone.occluders);
-
-  applyTint(zone);
 
   // A spawn point normally sits right in the doorway you came through, which
   // means it also sits inside that door's trigger. Suppress any trigger the
@@ -153,18 +153,6 @@ function enterZone(name, spawnKey, { silent = false } = {}) {
   if (!silent) audio.sfx('enter');
 }
 
-/**
- * Characters are unlit billboards, so the world's light never reaches them —
- * they get tinted by hand to sit in whatever the current light is.
- */
-function applyTint(zone) {
-  const t = zone.interior
-    ? (zone.name === 'arcade' ? 0xc0b4d8 : 0xf4ead8)
-    : timePreset(timeName).spriteTint;
-  player.setTint(t);
-  for (const n of zone.npcs) n.setTint(t);
-}
-
 /** Switch the time of day across every zone that has been built. */
 function setTime(name) {
   if (!TIMES[name]) return;
@@ -174,10 +162,7 @@ function setTime(name) {
   renderer.setGrade(p.grade);
   setWindowsLit(p.lamps);
   setLampsLit(p.lamps);
-  if (game.zone) {
-    applyTint(game.zone);
-    hud.showPlace(`${p.label}`);
-  }
+  if (game.zone) hud.showPlace(p.label);
 }
 
 function beginTransition(door) {
@@ -240,14 +225,8 @@ function prettyName(kind) {
 
 const _f = new THREE.Vector3();
 function facingVector() {
-  // The sprite's facing is screen-relative, so convert it back to world space.
-  const yaw = cam.yaw;
-  switch (player.dir) {
-    case 'up': return _f.set(-Math.sin(yaw), 0, -Math.cos(yaw));
-    case 'down': return _f.set(Math.sin(yaw), 0, Math.cos(yaw));
-    case 'left': return _f.set(-Math.cos(yaw), 0, Math.sin(yaw));
-    default: return _f.set(Math.cos(yaw), 0, -Math.sin(yaw));
-  }
+  // The model faces where it walks, so its yaw is the answer directly.
+  return _f.set(Math.sin(player.yaw), 0, Math.cos(player.yaw));
 }
 
 // --- npc behaviour ---------------------------------------------------------
@@ -269,8 +248,7 @@ function blockersFor(zone, self) {
 function updateNpcs(zone, dt) {
   for (const n of zone.npcs) {
     if (n.wanderRadius <= 0) {
-      n.animate(0, dt);
-      n.billboard(cam.yaw);
+      n.animate(0, dt, game.t);
       continue;
     }
     n.wanderTimer = (n.wanderTimer ?? Math.random() * 3) - dt;
@@ -302,12 +280,11 @@ function updateNpcs(zone, dt) {
         if (res.blocked) n.target = null;
         dist = Math.hypot(res.x - n.pos.x, res.z - n.pos.z);
         n.pos.set(res.x, res.y, res.z);
-        n.faceFromCamera(vx, vz, cam.yaw);
+        n.face(vx, vz);
         n.syncTransform();
       }
     }
-    n.animate(dist, dt);
-    n.billboard(cam.yaw);
+    n.animate(dist, dt, game.t);
   }
 }
 
@@ -350,11 +327,7 @@ function frame(now) {
       if (it) {
         game.talking = it;
         if (it.actor) {
-          // turn to face the player
-          const dx = player.pos.x - it.actor.pos.x;
-          const dz = player.pos.z - it.actor.pos.z;
-          it.actor.faceFromCamera(dx, dz, cam.yaw);
-          it.actor.setFrame(0, it.actor.dir);
+          it.actor.facePoint(player.pos.x, player.pos.z);
           it.actor.target = null;
         }
         audio.sfx('select');
@@ -389,12 +362,11 @@ function frame(now) {
         if (game.bumpAcc <= 0) { audio.sfx('bump'); game.bumpAcc = 0.4; }
       }
       player.pos.set(res.x, res.y, res.z);
-      player.faceFromCamera(vx, vz, cam.yaw);
+      player.face(vx, vz);
       player.syncTransform();
     }
   }
-  player.animate(moved, dt);
-  player.billboard(cam.yaw);
+  player.animate(moved, dt, game.t);
 
   // footsteps, keyed to the surface underfoot
   if (moved > 0) {

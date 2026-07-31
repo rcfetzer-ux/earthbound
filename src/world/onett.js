@@ -15,14 +15,15 @@ import * as THREE from 'three';
 import { P, shade } from '../core/palette.js';
 import { T, repeated, signTexture } from '../core/tex.js';
 import {
-  Zone, addSky, addClouds, addOutdoorLight, addBackdrop, terrace, pave, kerb, stairs,
+  Zone, addSky, addClouds, addOutdoorLight, addBackdrop, addSurroundingLand,
+  terrace, pave, kerb, stairs,
 } from './zone.js';
 import { timePreset, DEFAULT_TIME } from './daylight.js';
 import {
   building, tree, hedge, fence, lamp, signPost, car, bush, flowerPatch,
   box, flatMat, mat, decal,
 } from './build.js';
-import { Actor } from '../entities/actor.js';
+import { Actor, DIR_YAW } from '../entities/actor.js';
 
 // --- level constants -------------------------------------------------------
 
@@ -44,7 +45,10 @@ export function buildOnett(timeName = DEFAULT_TIME) {
   const clouds = addClouds(S, 11, preset);
   const light = addOutdoorLight(S, preset);
   zone.light = light;
-  addBackdrop(S, { radius: 132, seed: 5 });
+  // Countryside under and around the town, so the boundary is a place you
+  // cannot walk rather than the edge of the world.
+  addSurroundingLand(S, { y: TOWN_Y, seed: 9 });
+  addBackdrop(S, { radius: 168, seed: 5 });
   zone.onUpdate((dt) => clouds.update(dt));
 
   // Re-light the whole zone when the time of day changes.

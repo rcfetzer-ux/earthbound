@@ -20,6 +20,7 @@ npm run dev      # http://localhost:5173
 | `npm run shot` | screenshot tour of the whole level into `shots/` |
 | `npm run perf` | render-cost probe (scene complexity, fps, shadow/fill breakdown) |
 | `npm run times` | contact sheets of each vantage point under all four lighting presets |
+| `npm run cast` | line the whole cast up and photograph them, idle / walking / from behind |
 
 ## Publishing
 
@@ -67,10 +68,12 @@ from the original game.
   grass with dithered patches and tiny flowers, asphalt with speckle and faint
   cracks, clapboard siding, shingle courses, brick, wallpaper, carpet weave
   (`src/core/tex.js`).
-- **Characters** are assembled from parametric parts — cap, hair style, striped
-  or plain top, dress, uniform, apron — into a 4×4 walk-cycle sheet, then given
-  a hard 1px outline by an edge pass (`src/entities/sprites.js`). Thirteen
-  townsfolk and a dog come out of about a dozen numbers each.
+- **Characters** are low-poly chibi models assembled from parametric parts —
+  cap, hair style, striped or plain top, dress, uniform, apron
+  (`src/entities/model.js`). Thirteen townsfolk and a dog come out of about a
+  dozen numbers each. Each rigid part is merged into one multi-material mesh, so
+  a character costs six draw calls rather than the eighteen its primitive count
+  suggests.
 - **Music** is an original chiptune tracker: pulse/triangle/FM voices, six tunes
   in the spirit of the soundtrack's jazzy, slightly-off-kilter chord changes —
   major 7ths, walking basslines, swung 16ths (`src/core/audio.js`). Sound
@@ -106,9 +109,26 @@ whole town lights up at once even after the static bake has merged the geometry.
 
 **2.5D.** A narrow-FOV perspective camera at a fixed 33° pitch approximates the
 original's oblique projection while letting buildings have real volume.
-Characters are Y-axis billboards — they yaw to face the camera but never pitch,
-so they stay bolt-upright in a world of honest geometry. Their shadows are soft
-blob decals; the buildings get a real shadow map.
+
+Characters began as billboarded pixel sprites and are now 3D. At this
+resolution the sprites read as a different medium pasted onto the render: they
+never caught the light, never turned, and never cast a real shadow. The models
+are lit by the same sun as everything else, face where they walk, and have a
+procedural walk cycle driven by distance travelled rather than by time, so the
+stride stays in step at any frame rate.
+
+One detail worth recording: a baseball cap with a realistic brim puts the eyes
+in shadow at a camera 33° above. The brim is deliberately short and set high —
+the sightline from eye to camera clears its front edge by a small margin — and
+hair and caps are hemispheres rather than squashed spheres, because a sphere big
+enough to sit *over* the head also reaches down *around* it and swallows the
+face.
+
+**The edge of the world.** The walkable area is a set of platforms, and on its
+own that meant the ground simply stopped — a slab floating over the sky. A wide
+apron of countryside, low mounds and hedgerows now sits under and around
+everything, receding into fog. The boundary is still a line you cannot cross; it
+just no longer looks like the end of the world.
 
 **Terraced ground.** Onett is a hill town. Rather than a heightmap, the walkable
 world is a set of rectangular platforms, some sloped. A move is legal only if
@@ -167,8 +187,8 @@ src/
     zone.js            scene scaffolding, sky, clouds, lights, terraces, static bake
     collision.js       walkable platforms, solids, movement resolution
   entities/
-    sprites.js         parametric character sheets
-    actor.js           billboard sprite actor with walk cycle
+    model.js           parametric 3D character models and the walk cycle
+    actor.js           a character in the world: position, facing, animation
   ui/
     hud.js             dialogue window, place banner, prompts
     touch.js           on-screen thumb pad and buttons

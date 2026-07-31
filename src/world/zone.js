@@ -482,3 +482,58 @@ export function bakeStatic(scene) {
   scene.traverse((o) => { if (o.userData.occluder) occluders.push(o); });
   return { batches: mergedMeshes, absorbed: removed, occluders };
 }
+
+/**
+ * Land beyond the boundary.
+ *
+ * The playable area is a set of walkable platforms, and without this the world
+ * simply stopped at their edge — a slab floating over the sky. This lays a wide
+ * apron of countryside underneath and around everything, slightly below the town
+ * level, plus low mounds and hedgerows receding into the fog.
+ *
+ * Nothing here is walkable. The boundary is still a line you cannot cross; it
+ * just no longer looks like the end of the world.
+ */
+export function addSurroundingLand(scene, { y = 0, size = 620, seed = 9, drop = 0.55 } = {}) {
+  const rand = rng(seed);
+  const g = new THREE.Group();
+  g.name = 'surroundingLand';
+
+  const apron = new THREE.Mesh(
+    new THREE.PlaneGeometry(size, size),
+    new THREE.MeshLambertMaterial({ map: repeated(T.grass(), size / 9, size / 9) }),
+  );
+  apron.rotation.x = -Math.PI / 2;
+  apron.position.set(0, y - drop, 0);
+  apron.receiveShadow = true;
+  g.add(apron);
+
+  // Low rolling mounds, kept outside the play area so they never interrupt it.
+  const moundMat = new THREE.MeshLambertMaterial({ color: 0x6fbe32 });
+  const darkMound = new THREE.MeshLambertMaterial({ color: 0x5aa42a });
+  for (let i = 0; i < 40; i++) {
+    const a = rand() * Math.PI * 2;
+    const d = 96 + rand() * 190;
+    const r = 14 + rand() * 34;
+    const h = 3 + rand() * 11;
+    const m = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 6), rand() > 0.5 ? moundMat : darkMound);
+    m.scale.y = (h / r) * 0.9;
+    m.position.set(Math.cos(a) * d, y - drop - h * 0.25, Math.sin(a) * d * 0.92);
+    g.add(m);
+  }
+
+  // Hedgerows: field boundaries that give the middle distance some structure.
+  const hedgeMat = new THREE.MeshLambertMaterial({ color: 0x3f8a2c });
+  for (let i = 0; i < 26; i++) {
+    const a = rand() * Math.PI * 2;
+    const d = 110 + rand() * 150;
+    const len = 20 + rand() * 50;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(len, 2.2, 1.8), hedgeMat);
+    m.position.set(Math.cos(a) * d, y - drop + 1.1, Math.sin(a) * d * 0.92);
+    m.rotation.y = rand() * Math.PI;
+    g.add(m);
+  }
+
+  scene.add(g);
+  return g;
+}

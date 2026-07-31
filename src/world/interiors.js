@@ -11,7 +11,7 @@ import { P, shade } from '../core/palette.js';
 import { T, repeated, signTexture } from '../core/tex.js';
 import { Zone, addIndoorLight } from './zone.js';
 import { box, flatMat, mat, decal } from './build.js';
-import { Actor } from '../entities/actor.js';
+import { Actor, DIR_YAW } from '../entities/actor.js';
 
 // --- room shell ------------------------------------------------------------
 
@@ -566,7 +566,9 @@ export function buildNessHouse() {
   ];
   mom.home = new THREE.Vector3(6.2, 0, -2.0);
   mom.wanderRadius = 1.6;
-  mom.dir = 'down';
+  mom.yaw = DIR_YAW['down'];
+  mom.targetYaw = mom.yaw;
+  mom.model.rotation.y = mom.yaw;
   zone.npcs.push(mom);
   zone.scene.add(mom.group);
 
@@ -759,7 +761,9 @@ export function buildDrugstore() {
   ];
   keeper.home = new THREE.Vector3(3.0, 0, -5.0);
   keeper.wanderRadius = 1.2;
-  keeper.dir = 'down';
+  keeper.yaw = DIR_YAW['down'];
+  keeper.targetYaw = keeper.yaw;
+  keeper.model.rotation.y = keeper.yaw;
   zone.npcs.push(keeper);
   zone.scene.add(keeper.group);
 
@@ -837,7 +841,9 @@ export function buildArcade() {
   ];
   punk.home = new THREE.Vector3(2.4, 0, -2.6);
   punk.wanderRadius = 1.2;
-  punk.dir = 'up';
+  punk.yaw = DIR_YAW['up'];
+  punk.targetYaw = punk.yaw;
+  punk.model.rotation.y = punk.yaw;
   zone.npcs.push(punk);
   zone.scene.add(punk.group);
 
@@ -845,7 +851,9 @@ export function buildArcade() {
   kid.lines = ['One more game. I said that four games ago.'];
   kid.home = new THREE.Vector3(-3.6, 0, -2.6);
   kid.wanderRadius = 1.0;
-  kid.dir = 'up';
+  kid.yaw = DIR_YAW['up'];
+  kid.targetYaw = kid.yaw;
+  kid.model.rotation.y = kid.yaw;
   zone.npcs.push(kid);
   zone.scene.add(kid.group);
   return zone;
@@ -896,7 +904,9 @@ export function buildHotel() {
   ];
   clerk.home = new THREE.Vector3(0, 0, -6.0);
   clerk.wanderRadius = 0.8;
-  clerk.dir = 'down';
+  clerk.yaw = DIR_YAW['down'];
+  clerk.targetYaw = clerk.yaw;
+  clerk.model.rotation.y = clerk.yaw;
   zone.npcs.push(clerk);
   zone.scene.add(clerk.group);
 
@@ -949,7 +959,9 @@ export function buildHospital() {
   ];
   nurse.home = new THREE.Vector3(-5.5, 0, -0.8);
   nurse.wanderRadius = 1.0;
-  nurse.dir = 'down';
+  nurse.yaw = DIR_YAW['down'];
+  nurse.targetYaw = nurse.yaw;
+  nurse.model.rotation.y = nurse.yaw;
   zone.npcs.push(nurse);
   zone.scene.add(nurse.group);
 
