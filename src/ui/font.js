@@ -151,6 +151,13 @@ function jitter(seed) {
   return n - Math.floor(n);
 }
 
+/** Width in pixels of a single line at a given scale. */
+export function measureText(text, scale, face = FACES.town) {
+  let w = 0;
+  for (const ch of String(text)) w += (glyphWidth(ch) + face.gap) * scale;
+  return Math.max(0, w - face.gap * scale);
+}
+
 /**
  * Measure how the text will wrap.
  * @returns {string[]} lines

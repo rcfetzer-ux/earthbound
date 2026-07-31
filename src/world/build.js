@@ -8,8 +8,9 @@
  * thickness and a shadow.
  */
 import * as THREE from 'three';
+import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 import { P, shade } from '../core/palette.js';
-import { T, repeated, signTexture } from '../core/tex.js';
+import { T, repeated, signTexture, rng } from '../core/tex.js';
 
 /**
  * Matte, unshiny material — everything in town uses the same lighting model.
@@ -476,7 +477,7 @@ export function building(spec, ctx) {
     const sh = sign.h ?? 1.2;
     const bg = sign.bg ?? P.roofBlue;
     const st = signTexture(sign.text, bg, sign.fg ?? '#ffffff',
-      Math.max(64, Math.round(sw * 26)), Math.max(20, Math.round(sh * 26)));
+      Math.max(64, Math.round(sw * 26)), Math.max(20, Math.round(sh * 26)), sign.icon);
     // Only the outward face carries the lettering; the rest is a plain frame.
     const edge = flatMat(shade(bg, -0.3));
     const face = new THREE.MeshLambertMaterial({ map: st });
@@ -781,6 +782,56 @@ export function bush(x, z, y, ctx, { scale = 1, color = '#4a9c36' } = {}) {
   }
   if (ctx?.solids) ctx.solids.circle(x, z, 0.6 * scale, 'bush');
   return g;
+}
+
+/**
+ * Tall grass scattered across a rectangle of lawn.
+ *
+ * The lawns were a flat texture with nothing standing up out of them, which is
+ * what made the ground read as a painted plane rather than as a place. Each
+ * tuft is a pair of crossed alpha-tested quads; the whole field is merged into
+ * one geometry so a couple of hundred of them cost a single draw call.
+ *
+ * `avoid` is a list of {x0,z0,x1,z1} rectangles — roads, pavements, footprints —
+ * that the scatter skips, so grass never grows through the tarmac.
+ */
+export function grassTufts(x0, z0, x1, z1, y, {
+  count = 90, seed = 1, avoid = [], scale = 1, color = '#4fae3a',
+} = {}) {
+  const rand = rng(seed);
+  const geos = [];
+  const w = Math.abs(x1 - x0);
+  const d = Math.abs(z1 - z0);
+  const lo = { x: Math.min(x0, x1), z: Math.min(z0, z1) };
+
+  for (let i = 0, tries = 0; i < count && tries < count * 8; tries++) {
+    const px = lo.x + rand() * w;
+    const pz = lo.z + rand() * d;
+    if (avoid.some((r) => px > r.x0 - 0.6 && px < r.x1 + 0.6 && pz > r.z0 - 0.6 && pz < r.z1 + 0.6)) continue;
+    i++;
+    const s = (0.62 + rand() * 0.55) * scale;
+    const yaw = rand() * Math.PI;
+    for (const turn of [0, Math.PI / 2]) {
+      const q = new THREE.PlaneGeometry(s * 1.15, s);
+      q.translate(0, s / 2, 0);
+      q.rotateY(yaw + turn);
+      q.translate(px, 0, pz);
+      geos.push(q);
+    }
+  }
+  if (!geos.length) return null;
+
+  const merged = BufferGeometryUtils.mergeGeometries(geos, false);
+  for (const g of geos) g.dispose();
+  const m = new THREE.Mesh(merged, new THREE.MeshLambertMaterial({
+    map: T.tuft(color), transparent: true, alphaTest: 0.5, side: THREE.DoubleSide,
+  }));
+  m.position.y = y;
+  m.receiveShadow = true;
+  // Left out of the shadow map: a few hundred alpha-tested quads is a lot of
+  // depth-only fill for detail that would barely register on the ground.
+  m.castShadow = false;
+  return m;
 }
 
 export function flowerPatch(x, z, y, count = 8, colors = ['#f8f0a0', '#f8a8c8', '#ffffff', '#f8c060']) {

@@ -17,10 +17,12 @@ export const P = {
   dirt: '#c39a5e',
   dirtDark: '#a67c45',
 
-  // Tarmac reads warm-grey, not lilac. The afternoon grade tints shadows blue,
-  // so anything that starts violet finishes properly purple on screen.
-  road: '#8d8b92',
-  roadDark: '#74727c',
+  // Tarmac starts warm and slightly brown. It does not stay that way: the road
+  // faces straight up, so it takes the full blue of the hemisphere fill, and
+  // the afternoon grade tints shadows cooler still. Start it neutral-lilac, as
+  // it was, and every street in town finishes violet.
+  road: '#918a88',
+  roadDark: '#787270',
   roadLine: '#f2e9a8',
   walk: '#d8d2c4',
   walkDark: '#bdb6a6',

@@ -8,6 +8,7 @@
  */
 import * as THREE from 'three';
 import { P, shade, mix } from './palette.js';
+import { drawText, measureText, GLYPH_HEIGHT } from '../ui/font.js';
 
 // --- deterministic noise ---------------------------------------------------
 
@@ -684,6 +685,30 @@ export const T = {
     }, { mag: THREE.LinearFilter }),
 
   /** Soft radial blob used as a fake character shadow. */
+  /**
+   * A clump of grass blades on transparent ground, for the tufts scattered
+   * across the lawns. Drawn as tapering columns rather than as noise: at this
+   * resolution a blade has to be a deliberate shape or it dissolves.
+   */
+  tuft: (color = '#4fae3a') =>
+    make(`tuft-${color}`, 32, 32, (ctx, w, h, rand) => {
+      ctx.clearRect(0, 0, w, h);
+      const blades = 7;
+      for (let i = 0; i < blades; i++) {
+        const bx = 3 + Math.floor((i / blades) * (w - 8)) + Math.floor(rand() * 3);
+        const bh = 16 + Math.floor(rand() * 15);
+        const lean = rand() < 0.5 ? -1 : 1;
+        const tone = rand() > 0.55 ? shade(color, 0.18) : shade(color, -0.16);
+        for (let s = 0; s < bh; s++) {
+          const y = h - 1 - s;
+          const x = bx + Math.round((s / bh) * (s / bh) * 4) * lean;
+          const tw = s < bh * 0.55 ? 3 : (s < bh * 0.85 ? 2 : 1);
+          ctx.fillStyle = s > bh * 0.72 ? shade(tone, 0.22) : tone;
+          ctx.fillRect(x, y, tw, 1);
+        }
+      }
+    }, { transparent: true }),
+
   blob: () =>
     make('blob', 32, 32, (ctx, w, h) => {
       const g = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
@@ -698,8 +723,8 @@ export const T = {
 /**
  * Sign / storefront lettering rendered as a texture so shops read at a glance.
  */
-export function signTexture(text, bg, fg, w = 96, h = 24) {
-  return make(`sign-${text}-${bg}-${fg}-${w}x${h}`, w, h, (ctx) => {
+export function signTexture(text, bg, fg, w = 96, h = 24, icon = null) {
+  return make(`sign-${text}-${bg}-${fg}-${w}x${h}-${icon ?? ''}`, w, h, (ctx) => {
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, w, h);
     // frame: a bright inner rule and a dark drop edge read at low resolution
@@ -713,16 +738,60 @@ export function signTexture(text, bg, fg, w = 96, h = 24) {
     ctx.lineWidth = 1;
     ctx.strokeRect(2.5, 2.5, w - 5, h - 5);
 
-    // Text with a hard 1px shadow so it survives being shrunk on screen.
-    const size = Math.max(9, Math.floor(h * 0.66));
-    ctx.font = `bold ${size}px "Arial Black", "Helvetica", sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    const cx = w / 2;
-    const cy = h / 2 + 1;
-    ctx.fillStyle = shade(bg, -0.5);
-    ctx.fillText(text, cx + 1, cy + 1);
-    ctx.fillStyle = fg;
-    ctx.fillText(text, cx, cy);
+    // A pictogram on the left, the way half the shopfronts in the reference
+    // art work: you know what the shop sells before you can read the board.
+    let left = 5;
+    const art = icon && ICONS[icon];
+    if (art) {
+      const box = h - 9;
+      const s = Math.max(1, Math.floor(box / art.length));
+      const ix = left;
+      const iy = Math.floor((h - art.length * s) / 2);
+      for (let ry = 0; ry < art.length; ry++) {
+        for (let rx = 0; rx < art[ry].length; rx++) {
+          const c = art[ry][rx];
+          if (c === '.') continue;
+          ctx.fillStyle = ICON_INK[c] ?? fg;
+          ctx.fillRect(ix + rx * s, iy + ry * s, s, s);
+        }
+      }
+      left = ix + art[0].length * s + s * 2;
+    }
+
+    // The lettering is the same hand-drawn face the dialogue uses — the town's
+    // signwriter and its storyteller should not be two different people.
+    const avail = w - left - 5;
+    let scale = Math.max(1, Math.floor((h - 8) / GLYPH_HEIGHT));
+    while (scale > 1 && measureText(text, scale) > avail) scale--;
+    const tw = measureText(text, scale);
+    const tx = art ? left : Math.floor((w - tw) / 2);
+    const ty = Math.floor((h - GLYPH_HEIGHT * scale) / 2);
+    drawText(ctx, [text], {
+      x: tx, y: ty, scale, color: fg, shadow: shade(bg, -0.5),
+    });
   });
 }
+
+/** Pixel pictograms for shop boards. `#` takes the sign's ink; letters are keyed. */
+const ICON_INK = {
+  r: '#e04a3c', y: '#f5c53a', g: '#54b04a', w: '#fdf6e4', b: '#5aa8e0',
+  o: '#e8873a', k: '#3a3040', p: '#f0a8c0', n: '#a8703a',
+};
+const ICONS = {
+  // a capsule, half red half white
+  pill: ['..rrww..', '.rrrwww.', 'rrrrwwww', 'rrrrwwww', '.rrrwww.', '..rrww..'],
+  // a cottage loaf
+  bread: ['..nnnn..', '.nnnnnn.', 'nnoonnon', 'nonnoonn', 'nnnnnnnn', '.nnnnnn.'],
+  // a stack of books
+  book: ['........', 'rrrrrrr.', 'yyyyyyy.', 'bbbbbbb.', 'gggggggg', 'kkkkkkkk'],
+  // a burger in profile
+  burger: ['.nnnnnn.', 'nnwnnnnn', 'gggggggg', 'rrrrrrrr', 'yyyyyyyy', '.nnnnnn.'],
+  // a bed
+  bed: ['........', 'k..wwww.', 'kbbbbbbk', 'kkkkkkkk', 'k......k', '........'],
+  // a red cross
+  cross: ['..rr....', '..rr....', 'rrrrrr..', 'rrrrrr..', '..rr....', '..rr....'],
+  // an arcade cabinet
+  arcade: ['.kkkkkk.', 'kbbbbbbk', 'kbyybbbk', 'kkkkkkkk', 'k.rr.k.k', 'kkkkkkkk'],
+  // a police shield
+  shield: ['.bbbbbb.', 'bbyyyybb', 'bbyyyybb', '.bbbbbb.', '..bbbb..', '...bb...'],
+};

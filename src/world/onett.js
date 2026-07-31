@@ -19,7 +19,7 @@
  */
 import * as THREE from 'three';
 import { P, shade } from '../core/palette.js';
-import { T, repeated, signTexture } from '../core/tex.js';
+import { T, repeated, signTexture, rng } from '../core/tex.js';
 import {
   Zone, addSky, addClouds, addOutdoorLight, addBackdrop, addSurroundingLand,
   terrace, pave, kerb, stairs,
@@ -27,7 +27,7 @@ import {
 import { timePreset, DEFAULT_TIME } from './daylight.js';
 import {
   building, tree, hedge, fence, lamp, signPost, car, bush, flowerPatch,
-  box, flatMat, mat, decal,
+  grassTufts, box, flatMat, mat, decal,
 } from './build.js';
 import { Actor } from '../entities/actor.js';
 
@@ -59,7 +59,7 @@ const SEAM_CD = -50;   // the shelf meets the foot of the hill
  * cast look like pedestrians in a real town rather than characters in a toy one.
  */
 const HOUSE_H = 2.7;      // per storey
-const SHOP_H = 3.3;
+const SHOP_H = 3.7;
 
 export function buildOnett(timeName = DEFAULT_TIME) {
   const zone = new Zone('onett', 'ONETT');
@@ -216,7 +216,7 @@ export function buildOnett(timeName = DEFAULT_TIME) {
     wall: P.wallWhite, wallTex: 'stucco', roof: '#c8c4b8', roofType: 'flat',
     cornice: '#dfe6ea', pilasters: true, base: { tex: 'stone', h: 0.7 },
     signBand: { y: 3.0 }, yaw: 0.015,
-    sign: { text: 'HOSPITAL', bg: '#eef4f8', fg: '#d04848', side: 'south', y: 3.05, w: 8, h: 1.1 },
+    sign: { text: 'HOSPITAL', bg: '#eef4f8', fg: '#d04848', icon: 'cross', side: 'south', y: 3.05, w: 8.5, h: 1.2 },
     doors: [{ side: 'south', offset: 0, target: 'hospital', spawn: 'front', kind: 'glass', label: 'HOSPITAL' }],
     windows: [
       { side: 'south', offset: -5.2, y: 1.1, w: 2.0, h: 1.5 },
@@ -259,30 +259,30 @@ export function buildOnett(timeName = DEFAULT_TIME) {
   const shopRow = [
     {
       name: 'drug store', x: -46, w: 13, wall: P.brick, wallTex: 'brick', roof: P.roofRed,
-      sign: 'DRUG STORE', signBg: '#c03a30', awn: ['#3f9c4a', '#f4f0e2', true],
+      sign: 'DRUG STORE', signBg: '#c03a30', icon: 'pill', awn: ['#3f9c4a', '#f4f0e2', true],
     },
     {
       name: 'bakery', x: -30, w: 11, wall: P.wallCream, wallTex: 'stucco', roof: P.roofOrange,
-      sign: 'BAKERY', signBg: '#e0872c', awn: ['#e0872c', '#f4f0e2', false],
+      sign: 'BAKERY', signBg: '#e0872c', icon: 'bread', awn: ['#e0872c', '#f4f0e2', false],
     },
     {
       name: 'library', x: -13, w: 12, wall: P.wallTan, wallTex: 'stucco', roof: P.roofGreen,
-      sign: 'LIBRARY', signBg: '#3a7a52', awn: null,
+      sign: 'LIBRARY', signBg: '#3a7a52', icon: 'book', awn: null,
     },
     {
       name: 'burger shop', x: 6, w: 12, wall: P.wallSalmon, wallTex: 'stucco', roof: '#d8563c',
-      sign: 'BURGER', signBg: '#c03a30', awn: ['#f0c040', '#f4f0e2', false],
+      sign: 'BURGER', signBg: '#c03a30', icon: 'burger', awn: ['#f0c040', '#f4f0e2', false],
     },
   ];
   shopRow.forEach((s, i) => {
     S.add(building({
       name: s.name, x: s.x, z: -1.5, y: MAIN_Y, w: s.w, d: 9, h: SHOP_H,
       wall: s.wall, wallTex: s.wallTex, roof: s.roof, roofType: 'gable', ridge: 'x',
-      roofH: 2.3, roofOverhang: 0.45, cornice: true, pilasters: true,
-      base: { tex: 'cobble', h: 0.7 }, signBand: { y: SHOP_H - 1.2 },
+      roofH: 2.3, roofOverhang: 0.32, cornice: true, pilasters: true,
+      base: { tex: 'cobble', h: 0.7 }, signBand: { y: SHOP_H - 1.05 },
       yaw: (i % 2 ? 0.014 : -0.012), roofTilt: (i % 2 ? -0.015 : 0.013),
-      sign: { text: s.sign, bg: s.signBg, fg: '#fff6e0', side: 'south', y: SHOP_H - 1.2, w: s.w * 0.7, h: 1.0 },
-      awning: s.awn ? { color: s.awn[0], color2: s.awn[1], check: s.awn[2], w: s.w * 0.6, side: 'south', y: 2.3 } : false,
+      sign: { text: s.sign, bg: s.signBg, fg: '#fff6e0', icon: s.icon, side: 'south', y: SHOP_H - 1.05, w: s.w * 0.78, h: 1.05 },
+      awning: s.awn ? { color: s.awn[0], color2: s.awn[1], check: s.awn[2], w: s.w * 0.66, side: 'south', y: 1.95 } : false,
       doors: [{
         side: 'south', offset: 0,
         target: s.name === 'drug store' ? 'drugstore' : null,
@@ -300,7 +300,7 @@ export function buildOnett(timeName = DEFAULT_TIME) {
     name: 'arcade', x: 24, z: -2, y: MAIN_Y, w: 14, d: 10, h: 3.9,
     wall: P.wallLilac, wallTex: 'stucco', roof: '#6a4a9a', roofType: 'flat',
     cornice: '#5a3a86', base: { tex: 'cobble', h: 0.7 }, pilasters: true, yaw: -0.01,
-    sign: { text: 'ARCADE', bg: '#4a2a6a', fg: '#ffe060', side: 'south', y: 3.1, w: 8, h: 1.3 },
+    sign: { text: 'ARCADE', bg: '#4a2a6a', fg: '#ffe060', icon: 'arcade', side: 'south', y: 3.1, w: 8, h: 1.3 },
     doors: [{ side: 'south', offset: 0, target: 'arcade', spawn: 'arcade', kind: 'glass', label: 'ARCADE' }],
     windows: [
       { side: 'south', offset: -4.6, y: 0.9, w: 2.6, h: 1.6, lit: true },
@@ -332,8 +332,8 @@ export function buildOnett(timeName = DEFAULT_TIME) {
     name: 'hotel', x: 43, z: -3, y: MAIN_Y, w: 15, d: 11, h: 2.8, storeys: 2,
     wall: P.wallSky, wallTex: 'siding', roof: P.roofBlue, roofType: 'hip', roofH: 2.0,
     trim: P.wallWhite, cornice: true, base: { tex: 'stone', h: 0.6 }, yaw: 0.012,
-    sign: { text: 'HOTEL', bg: P.roofBlue, fg: '#ffffff', side: 'south', y: 2.2, w: 5, h: 1.0 },
-    awning: { color: P.roofBlue, color2: '#e8f0f8', w: 4.2, side: 'south', y: 2.1 },
+    sign: { text: 'HOTEL', bg: P.roofBlue, fg: '#ffffff', icon: 'bed', side: 'south', y: 2.5, w: 6, h: 1.1 },
+    awning: { color: P.roofBlue, color2: '#e8f0f8', w: 4.6, side: 'south', y: 1.95 },
     doors: [{ side: 'south', offset: 0, target: 'hotel', spawn: 'hotel', kind: 'glass', label: 'HOTEL' }],
     windows: [
       { side: 'south', offset: -5, y: 0.9, w: 1.7, h: 1.3 },
@@ -350,7 +350,7 @@ export function buildOnett(timeName = DEFAULT_TIME) {
     name: 'police station', x: -40, z: 22, y: MAIN_Y, w: 13, d: 9, h: 3.4,
     wall: P.wallTan, wallTex: 'brick', roof: P.roofBlue, roofType: 'gable', ridge: 'x',
     roofH: 1.7, cornice: true, base: { tex: 'stone', h: 0.7 }, pilasters: true, yaw: -0.014,
-    sign: { text: 'POLICE', bg: '#2c3a6a', fg: '#f0f4ff', side: 'north', y: 2.4, w: 6, h: 1.0 },
+    sign: { text: 'POLICE', bg: '#2c3a6a', fg: '#f0f4ff', icon: 'shield', side: 'north', y: 2.4, w: 7, h: 1.1 },
     doors: [{ side: 'north', offset: 0, target: null, label: 'POLICE STATION' }],
     windows: [
       { side: 'north', offset: -4, y: 1.0, w: 1.4, h: 1.4 },
@@ -466,13 +466,23 @@ export function buildOnett(timeName = DEFAULT_TIME) {
   // Boundary planting — trees and hedges marking where the town stops
   // ======================================================================
 
+  // A treeline planted on an exact grid reads as fence posts. Everything below
+  // is nudged off its step by a deterministic wobble, so the boundary is a
+  // thicket you cannot get through rather than a row you can count.
+  const wob = rng(4242);
+  const jog = (v, amt) => v + (wob() - 0.5) * 2 * amt;
+
   for (let z = 32; z < 60; z += 7) {
-    S.add(tree(BOUNDS.x0 + 3, z, SOUTH_Y, { scale: 1.1, kind: z % 14 === 0 ? 'pine' : 'round' }, ctx));
-    S.add(tree(BOUNDS.x1 - 3, z + 3, SOUTH_Y, { scale: 1.15 }, ctx));
+    S.add(tree(jog(BOUNDS.x0 + 3.5, 2), jog(z, 2.4), SOUTH_Y,
+      { scale: 1.0 + wob() * 0.3, kind: wob() > 0.55 ? 'pine' : 'round' }, ctx));
+    S.add(tree(jog(BOUNDS.x1 - 3.5, 2), jog(z + 3, 2.4), SOUTH_Y,
+      { scale: 1.0 + wob() * 0.35 }, ctx));
   }
-  for (let x = -66; x < 68; x += 8) {
-    if (x > -52 && x < -38) continue;                 // leave the Twoson road open
-    S.add(tree(x, BOUNDS.z1 - 3, SOUTH_Y, { scale: 1.15, kind: x % 16 === 0 ? 'pine' : 'round' }, ctx));
+  for (let x = -66; x < 68; x += 7) {
+    // leave the Twoson road and the south pavement open
+    if (x > -56 && x < -36) continue;
+    S.add(tree(jog(x, 2.2), jog(BOUNDS.z1 - 0.9, 0.9), SOUTH_Y,
+      { scale: 1.05 + wob() * 0.35, kind: wob() > 0.6 ? 'pine' : 'round' }, ctx));
   }
   for (let z = -6; z < 26; z += 6) {
     S.add(hedge(BOUNDS.x0 + 1.4, z, MAIN_Y, 2.4, 6, 1.3, ctx));
@@ -482,17 +492,70 @@ export function buildOnett(timeName = DEFAULT_TIME) {
     S.add(hedge(BOUNDS.x0 + 1.4, z, HOUSE_Y, 2.4, 6, 1.3, ctx));
   }
   // the top of the shelf, north of the town sign: a treeline, then the hill
-  for (let x = -66; x < 14; x += 7) {
-    S.add(tree(x, -59, HOUSE_Y, { scale: 1.2, kind: 'pine' }, ctx));
+  for (let x = -66; x < 14; x += 6.5) {
+    S.add(tree(jog(x, 2), jog(-59, 1.6), HOUSE_Y, { scale: 1.05 + wob() * 0.35, kind: 'pine' }, ctx));
   }
-  for (let x = -66; x < -14; x += 8) {
-    S.add(tree(x, -50, HOUSE_Y, { scale: 1.05, kind: x % 16 === 0 ? 'round' : 'pine' }, ctx));
+  for (let x = -66; x < -14; x += 7) {
+    S.add(tree(jog(x, 2.4), jog(-50, 2), HOUSE_Y,
+      { scale: 0.95 + wob() * 0.3, kind: wob() > 0.5 ? 'round' : 'pine' }, ctx));
   }
   for (const [x, z, y] of [
     [-54, 3.2, MAIN_Y], [-20, 3.2, MAIN_Y], [18, 16.6, MAIN_Y], [44, 3.2, MAIN_Y],
     [-8, -14.2, HOUSE_Y], [24, -14.2, HOUSE_Y], [-40, -14.2, HOUSE_Y],
   ]) {
     S.add(bush(x, z, y, ctx, { scale: 0.9 }));
+  }
+
+  // Terrace seams are dead-straight lines the full width of the map — the one
+  // thing the eye reads instantly as "made of rectangles". Boulders and scrub
+  // spilling over each lip break the line without touching the ground data.
+  const seams = [
+    { z: SEAM_AB, y: SOUTH_Y, top: MAIN_Y, skip: [[-56, -38]] },
+    { z: SEAM_BC, y: MAIN_Y, top: HOUSE_Y, skip: [[50, 64]] },
+    { z: SEAM_CD, y: HOUSE_Y, top: HILL_Y, skip: [[14, 32]], x0: 30, x1: BOUNDS.x1 },
+  ];
+  for (const seam of seams) {
+    const from = seam.x0 ?? BOUNDS.x0 + 4;
+    const to = seam.x1 ?? BOUNDS.x1 - 4;
+    for (let x = from; x < to; x += 7) {
+      const px = jog(x, 2.2);
+      if (seam.skip.some(([a, b]) => px > a && px < b)) continue;
+      const r = 0.7 + wob() * 0.8;
+      const rock = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(r, 0),
+        mat(repeated(T.stoneCourse(), 1, 1), 0xa8a49c),
+      );
+      // Sat on the upper lip, overhanging it — the boulder half-buries the
+      // corner where the flat plate meets its cliff face.
+      const pz = seam.z - 0.9 - wob() * 0.9;
+      rock.position.set(px, seam.top - r * 0.62, pz);
+      rock.rotation.set(px, r, seam.z);
+      rock.castShadow = true;
+      S.add(rock);
+      ctx.solids.circle(px, pz, r * 0.8, 'boulder');
+      if (wob() > 0.45) {
+        S.add(bush(jog(px + 3, 1.6), seam.z - 2.2 - wob() * 1.8, seam.top, ctx,
+          { scale: 0.7 + wob() * 0.5 }));
+      }
+    }
+  }
+
+  // ======================================================================
+  // Tall grass — the lawns were a flat texture with nothing growing out of
+  // them. Everything already paved is registered on zone.surfaces, so the
+  // scatter can simply refuse to grow through it.
+  // ======================================================================
+
+  // Paving and building footprints share a shape, so one list covers both.
+  const paved = [...zone.surfaces, ...zone.solids.rects];
+  for (const [x0, z0, x1, z1, y, n, seed] of [
+    [BOUNDS.x0, SEAM_AB, BOUNDS.x1, BOUNDS.z1, SOUTH_Y, 620, 21],      // A
+    [BOUNDS.x0, SEAM_BC, BOUNDS.x1, SEAM_AB, MAIN_Y, 300, 22],         // B
+    [BOUNDS.x0, -62, 30, SEAM_BC, HOUSE_Y, 640, 23],                   // C west
+    [30, SEAM_CD, BOUNDS.x1, SEAM_BC, HOUSE_Y, 340, 24],               // C east
+  ]) {
+    const tufts = grassTufts(x0, z0, x1, z1, y, { count: n, seed, avoid: paved, scale: 1.2 });
+    if (tufts) S.add(tufts);
   }
 
   // ======================================================================
