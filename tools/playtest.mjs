@@ -230,8 +230,13 @@ await page.keyboard.press('Space');
 await page.waitForTimeout(350);
 s = await state();
 check('talking opens the dialogue window', s.dialogue);
-const text = await page.evaluate(() => document.querySelector('#dialogue .text').textContent);
-check('dialogue types text out', text.length > 0, JSON.stringify(text.slice(0, 40)));
+// The text is drawn into a canvas now, so ask the HUD what it is revealing
+// rather than reading DOM text.
+const typed = await page.evaluate(() => {
+  const h = window.__game.hud;
+  return { chars: h.chars, page: (h.lines[h.pageIndex] ?? '').slice(0, h.chars) };
+});
+check('dialogue types text out', typed.chars > 0, JSON.stringify(typed.page.slice(0, 40)));
 // Page through to the end. Pressing again would just start the conversation
 // over, so stop as soon as the window closes.
 let closed = false;

@@ -78,24 +78,13 @@ html, body {
   pointer-events: none;
 }
 
-#dialogue .who {
-  color: var(--accent);
-  font-size: clamp(13px, 1.6vw, 16px);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  margin-bottom: 8px;
-  text-shadow: 2px 2px 0 #000;
-}
-
-#dialogue .who:empty { display: none; }
-
+/* The text is a canvas: the glyphs are drawn by hand, so keep them square. */
 #dialogue .text {
-  font-size: clamp(15px, 2vw, 21px);
-  line-height: 1.55;
-  letter-spacing: 0.02em;
-  white-space: pre-wrap;
-  text-shadow: 2px 2px 0 #000;
-  font-weight: 700;
+  display: block;
+  width: 100%;
+  height: clamp(118px, 17vh, 176px);
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 #dialogue .more {

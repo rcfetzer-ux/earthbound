@@ -74,6 +74,13 @@ from the original game.
   dozen numbers each. Each rigid part is merged into one multi-material mesh, so
   a character costs six draw calls rather than the eighteen its primitive count
   suggests.
+- **Type** is a hand-drawn 5×7 pixel face (`src/ui/font.js`), blitted to a
+  canvas rather than set as DOM text — browser type at any size was the one
+  thing on screen that could never belong to this world. There are two faces, as
+  the original had several: an upright one for the town, and an unsteady one
+  where every glyph is tilted and knocked off the baseline, for anyone who isn't
+  quite from around here. The glyph scale is chosen from the text, so a long
+  page shrinks to fit instead of being cut off.
 - **Music** is an original chiptune tracker: pulse/triangle/FM voices, six tunes
   in the spirit of the soundtrack's jazzy, slightly-off-kilter chord changes —
   major 7ths, walking basslines, swung 16ths (`src/core/audio.js`). Sound
@@ -190,6 +197,7 @@ src/
     model.js           parametric 3D character models and the walk cycle
     actor.js           a character in the world: position, facing, animation
   ui/
+    font.js            hand-drawn pixel typefaces, upright and unsteady
     hud.js             dialogue window, place banner, prompts
     touch.js           on-screen thumb pad and buttons
     style.css          UI chrome

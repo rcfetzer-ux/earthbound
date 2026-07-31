@@ -624,7 +624,7 @@ function buildMeteoriteHill(zone, S, ctx) {
   for (let x = 30; x < 56; x += 6) S.add(hedge(x, -68.8, HILL_Y, 6, 2.4, 1.3, ctx));
 
   zone.interactables.push({
-    x: 43, z: -54.5, r: 4.0, name: 'meteorite',
+    x: 43, z: -54.5, r: 4.0, name: 'meteorite', speaker: 'METEORITE',
     lines: [
       'The meteorite is still warm. Something inside it hums, faint and patient.',
       'It sounds almost like it is waiting for someone.',

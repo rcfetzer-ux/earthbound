@@ -122,6 +122,25 @@ if (!ONLY || '18-dialogue'.includes(ONLY)) {
   process.stdout.write('✓ 18-dialogue\n');
 }
 
+// The unsteady face, used by anything that isn't quite from around here.
+if (!ONLY || '20-odd-font'.includes(ONLY)) {
+  await page.evaluate(() => {
+    const g = window.__game;
+    g.enterZone('onett', 'start');
+    g.player.pos.set(43, 5.6, -53.5);
+    g.player.syncTransform();
+    g.cam.desiredYaw = 0;
+    g.cam.yaw = 0;
+    g.cam.first = true;
+    g.game.doorCooldown = 999;
+  });
+  await page.waitForTimeout(500);
+  await page.keyboard.press('Space');
+  await page.waitForTimeout(1600);
+  writeFileSync(`${OUT}/20-odd-font.png`, await page.screenshot());
+  process.stdout.write('✓ 20-odd-font\n');
+}
+
 await browser.close();
 
 if (errors.length) {

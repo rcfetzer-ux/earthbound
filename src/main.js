@@ -206,7 +206,7 @@ function findInteraction() {
     const dz = it.z - pz;
     const d = dx * dx + dz * dz;
     if (d < (it.r ?? 1.5) ** 2 && d < bestD * 1.6) {
-      best = { kind: 'thing', lines: it.lines, name: '' };
+      best = { kind: 'thing', lines: it.lines, name: it.speaker ?? '' };
       bestD = d;
     }
   }
@@ -489,6 +489,6 @@ requestAnimationFrame(frame);
 
 // expose a little for screenshot tooling / debugging
 window.__game = {
-  game, player, cam, renderer, zones, enterZone, start, WALK_SPEED, RUN_SPEED,
+  game, player, cam, renderer, zones, enterZone, start, hud, WALK_SPEED, RUN_SPEED,
   setTime, get timeName() { return timeName; },
 };
