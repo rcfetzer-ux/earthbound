@@ -116,16 +116,54 @@ const game = {
 
 // --- zone switching --------------------------------------------------------
 
+/**
+ * The nearest spot to (x,z) that is on walkable ground and clear of solids.
+ *
+ * Arriving inside a solid is a soft lock: the mover slides along walls, but a
+ * disc already overlapping one has nowhere to slide to. Spiralling outwards for
+ * somewhere standable turns a level-data mistake into a bad camera angle
+ * instead of a stuck player.
+ */
+function freeSpotNear(zone, x, z, y, radius = 0.42) {
+  const ok = (px, pz) => {
+    const gy = zone.ground.sample(px, pz, y);
+    return gy !== null && !zone.solids.hit(px, pz, radius) ? gy : null;
+  };
+  const here = ok(x, z);
+  if (here !== null) return { x, y: here, z };
+
+  for (let r = 0.6; r <= 6; r += 0.6) {
+    for (let a = 0; a < 16; a++) {
+      const t = (a / 16) * Math.PI * 2;
+      const px = x + Math.cos(t) * r;
+      const pz = z + Math.sin(t) * r;
+      const gy = ok(px, pz);
+      if (gy !== null) return { x: px, y: gy, z: pz };
+    }
+  }
+  return { x, y: zone.ground.sample(x, z, y) ?? y, z };
+}
+
 function enterZone(name, spawnKey, { silent = false } = {}) {
   const zone = getZone(name);
   if (game.zone) game.zone.scene.remove(player.group);
   game.zone = zone;
   zone.scene.add(player.group);
 
-  const sp = zone.spawns[spawnKey] ?? zone.spawns.start ?? { x: 0, z: 0, y: 0, dir: 'down' };
-  player.pos.set(sp.x, sp.y ?? 0, sp.z);
-  const grounded = zone.ground.sample(sp.x, sp.z, sp.y ?? 0);
-  if (grounded !== null) player.pos.y = grounded;
+  // A door naming a spawn the target zone does not define is a level-data bug,
+  // and used to strand the player at the origin — which in the arcade is inside
+  // a cabinet, so you arrived unable to move. Say so, then fall back.
+  if (spawnKey && !zone.spawns[spawnKey]) {
+    console.warn(`enterZone: '${name}' has no spawn '${spawnKey}'; using a fallback`);
+  }
+  const sp = zone.spawns[spawnKey]
+    ?? zone.spawns.front
+    ?? zone.spawns.start
+    ?? Object.values(zone.spawns)[0]
+    ?? { x: 0, z: 0, y: 0, dir: 'down' };
+
+  const safe = freeSpotNear(zone, sp.x, sp.z, sp.y ?? 0);
+  player.pos.set(safe.x, safe.y, safe.z);
   player.yaw = DIR_YAW[sp.dir ?? 'down'] ?? 0;
   player.targetYaw = player.yaw;
   player.model.rotation.y = player.yaw;

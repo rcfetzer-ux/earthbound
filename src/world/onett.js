@@ -286,7 +286,7 @@ export function buildOnett(timeName = DEFAULT_TIME) {
       doors: [{
         side: 'south', offset: 0,
         target: s.name === 'drug store' ? 'drugstore' : null,
-        spawn: 'drugstore', kind: 'glass', label: s.sign,
+        spawn: 'front', kind: 'glass', label: s.sign,
       }],
       windows: [
         { side: 'south', offset: -s.w * 0.3, y: 0.9, w: 2.0, h: 1.4 },
@@ -301,7 +301,7 @@ export function buildOnett(timeName = DEFAULT_TIME) {
     wall: P.wallLilac, wallTex: 'stucco', roof: '#6a4a9a', roofType: 'flat',
     cornice: '#5a3a86', base: { tex: 'cobble', h: 0.7 }, pilasters: true, yaw: -0.01,
     sign: { text: 'ARCADE', bg: '#4a2a6a', fg: '#ffe060', icon: 'arcade', side: 'south', y: 3.1, w: 8, h: 1.3 },
-    doors: [{ side: 'south', offset: 0, target: 'arcade', spawn: 'arcade', kind: 'glass', label: 'ARCADE' }],
+    doors: [{ side: 'south', offset: 0, target: 'arcade', spawn: 'front', kind: 'glass', label: 'ARCADE' }],
     windows: [
       { side: 'south', offset: -4.6, y: 0.9, w: 2.6, h: 1.6, lit: true },
       { side: 'south', offset: 4.6, y: 0.9, w: 2.6, h: 1.6, lit: true },
@@ -334,7 +334,7 @@ export function buildOnett(timeName = DEFAULT_TIME) {
     trim: P.wallWhite, cornice: true, base: { tex: 'stone', h: 0.6 }, yaw: 0.012,
     sign: { text: 'HOTEL', bg: P.roofBlue, fg: '#ffffff', icon: 'bed', side: 'south', y: 2.5, w: 6, h: 1.1 },
     awning: { color: P.roofBlue, color2: '#e8f0f8', w: 4.6, side: 'south', y: 1.95 },
-    doors: [{ side: 'south', offset: 0, target: 'hotel', spawn: 'hotel', kind: 'glass', label: 'HOTEL' }],
+    doors: [{ side: 'south', offset: 0, target: 'hotel', spawn: 'front', kind: 'glass', label: 'HOTEL' }],
     windows: [
       { side: 'south', offset: -5, y: 0.9, w: 1.7, h: 1.3 },
       { side: 'south', offset: 5, y: 0.9, w: 1.7, h: 1.3 },

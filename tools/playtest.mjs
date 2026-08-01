@@ -178,6 +178,30 @@ for (const [zone, label] of [
     `${info.npcs} npcs, ${info.exits} exit(s)`);
 }
 
+// --- 9a. walking through a shop door leaves you able to walk --------------
+// The reported symptom was arriving in the middle of the arcade unable to
+// move: the door named a spawn the arcade did not define, so the player was
+// dropped at the origin, inside a cabinet. Entering by hand would not have
+// caught it — only using the door does.
+for (const [label, zone, x, z, y] of [
+  ['arcade', 'arcade', 24, 5.6, 2.8],
+  ['drug store', 'drugstore', -46, 5.6, 2.8],
+  ['hotel', 'hotel', 43, 5.6, 2.8],
+]) {
+  await teleport('onett', x, z, y);
+  s = await holdUntil('ArrowUp', (v) => v.zone === zone, 6000);
+  if (s.zone !== zone) {
+    check(`${label}: door leads inside`, false, `zone=${s.zone}`);
+    continue;
+  }
+  await page.waitForTimeout(400);
+  before = await state();
+  after = await holdUntil('ArrowLeft', (v) => Math.abs(v.x - before.x) > 0.8, 3000);
+  check(`${label}: you can move after coming through the door`,
+    Math.abs(after.x - before.x) > 0.5 || Math.abs(after.z - before.z) > 0.5,
+    `at ${after.x},${after.z} (from ${before.x},${before.z})`);
+}
+
 // --- 9b. every spawn and door is geometrically sane -----------------------
 // A spawn inside its own door trigger bounces the player between rooms; a door
 // with no standable approach can never be used. Both are easy to introduce by
@@ -199,6 +223,16 @@ const geometry = await page.evaluate(() => {
       }
     }
     for (const d of z.doors) {
+      // A door naming a spawn its target does not define drops the player at
+      // the target's origin, which is as likely as not inside the furniture.
+      if (d.target) {
+        g.enterZone(d.target, 'start');
+        const dest = g.game.zone;
+        if (!dest.spawns[d.spawn ?? 'front']) {
+          out.push(`${n}: door '${d.label}' → ${d.target}/'${d.spawn}' — no such spawn`);
+        }
+        g.enterZone(n, 'start');
+      }
       let ok = false;
       for (let a = 0; a < 16 && !ok; a++) {
         for (const rr of [0.3, 0.6, 0.9]) {
