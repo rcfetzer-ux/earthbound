@@ -23,20 +23,23 @@ const ONLY = arg('only', null);
 
 /** [name, zone, spawnOrPos, camYawDegrees] */
 const SHOTS = [
-  ['01-front-door', 'onett', { x: 33, z: -30, y: 5.8 }, 0],
-  ['02-shelf-street', 'onett', { x: 44, z: -21.5, y: 5.8 }, 20],
-  ['03-stairs-down', 'onett', { x: 57, z: -9, y: 5.8 }, 0],
-  ['04-main-street', 'onett', { x: -20, z: 10.5, y: 2.8 }, 0],
-  ['05-shops', 'onett', { x: -13, z: 5.5, y: 2.8 }, -25],
-  ['06-civic-row', 'onett', { x: -12, z: 16.8, y: 2.8 }, 180],
-  ['07-hotel', 'onett', { x: 43, z: 5.5, y: 2.8 }, 0],
-  ['08-meteorite', 'onett', { x: 48, z: -60, y: 9.6 }, 0],
-  ['09-south-road', 'onett', { x: -8, z: 50, y: 0 }, 0],
-  ['10-drugstore-front', 'onett', { x: -46, z: 5.5, y: 2.8 }, 0],
-  ['21-town-sign', 'onett', { x: 0.5, z: -40, y: 5.8 }, 0],
-  ['22-west-stairs', 'onett', { x: -47, z: 30, y: 1.4 }, 0],
-  ['23-hill-track', 'onett', { x: 26, z: -56, y: 7.7 }, 90],
-  ['19-camera-occlusion', 'onett', { x: -46, z: 5.0, y: 2.8 }, 0],
+  ['01-front-door', 'onett', { x: 39, z: -50, y: 5.8 }, 0],
+  ['02-shelf-street', 'onett', { x: 50, z: -39.5, y: 5.8 }, 20],
+  ['03-stairs-down', 'onett', { x: 89, z: -18, y: 5.8 }, 0],
+  ['04-main-street', 'onett', { x: -40, z: 25, y: 2.8 }, 0],
+  ['05-shops', 'onett', { x: -24, z: 18.5, y: 2.8 }, -25],
+  ['06-civic-row', 'onett', { x: -22, z: 32.8, y: 2.8 }, 180],
+  ['07-hotel', 'onett', { x: 52, z: 18.5, y: 2.8 }, 0],
+  ['09-south-road', 'onett', { x: -20, z: 73, y: 0 }, 0],
+  ['10-drugstore-front', 'onett', { x: -66, z: 18.5, y: 2.8 }, 0],
+  ['19-camera-occlusion', 'onett', { x: -66, z: 18, y: 2.8 }, 0],
+  ['21-town-sign', 'onett', { x: 13, z: -66, y: 5.8 }, 0],
+  ['22-west-stairs', 'onett', { x: -79, z: 50, y: 1.4 }, 0],
+  ['24-town-green', 'onett', { x: 4, z: -9, y: 2.8 }, 180],
+  ['25-valley-mouth', 'onett', { x: 15, z: -84, y: 6 }, 0],
+  ['26-valley-mid', 'onett', { x: 20, z: -108, y: 8 }, 0],
+  ['27-valley-bend', 'onett', { x: 33, z: -132, y: 12 }, 0],
+  ['08-meteorite', 'onett', { x: -4.6, z: -152, y: 13 }, 0],
   ['11-home-inside', 'nessHouse', 'front', 0],
   ['12-bedroom', 'nessBedroom', 'stairs', 0],
   ['13-drugstore-inside', 'drugstore', 'front', 0],
@@ -109,9 +112,9 @@ if (!ONLY || '18-dialogue'.includes(ONLY)) {
     const g = window.__game;
     g.enterZone('onett', 'start');
     const npc = g.game.zone.npcs.find((n) => n.kind === 'neighborKid') ?? g.game.zone.npcs[0];
-    npc.pos.set(42.5, 5.8, -28.7);
+    npc.pos.set(51.5, 5.8, -48.7);
     npc.syncTransform();
-    g.player.pos.set(42.5, 5.8, -27.2);
+    g.player.pos.set(51.5, 5.8, -47.2);
     g.player.facePoint(npc.pos.x, npc.pos.z);
     g.player.yaw = g.player.targetYaw;
     g.player.model.rotation.y = g.player.yaw;
@@ -130,7 +133,8 @@ if (!ONLY || '20-odd-font'.includes(ONLY)) {
   await page.evaluate(() => {
     const g = window.__game;
     g.enterZone('onett', 'start');
-    g.player.pos.set(48, 9.6, -62.5);
+    g.player.pos.set(-4.6, 13, -151);
+    g.player.pos.y = g.game.zone.ground.sample(-4.6, -151, 13) ?? 13;
     g.player.syncTransform();
     g.cam.desiredYaw = 0;
     g.cam.yaw = 0;

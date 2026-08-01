@@ -72,7 +72,7 @@ void main() {
 `;
 
 export function addSky(scene, preset = timePreset(DEFAULT_TIME)) {
-  const geo = new THREE.SphereGeometry(300, 24, 16);
+  const geo = new THREE.SphereGeometry(380, 24, 16);
   const mat = new THREE.ShaderMaterial({
     uniforms: {
       uTop: { value: new THREE.Color(preset.sky.top) },
@@ -116,7 +116,7 @@ export function addClouds(scene, seed = 7, preset = timePreset(DEFAULT_TIME)) {
       }),
     );
     const a = (i / 18) * Math.PI * 2 + rand() * 0.3;
-    const d = 210 + rand() * 60;
+    const d = 250 + rand() * 70;
     m.position.set(Math.cos(a) * d, 58 + rand() * 60, Math.sin(a) * d);
     m.lookAt(0, m.position.y * 0.55, 0);
     m.userData.dynamic = true;
@@ -494,10 +494,16 @@ export function bakeStatic(scene) {
  * Nothing here is walkable. The boundary is still a line you cannot cross; it
  * just no longer looks like the end of the world.
  */
-export function addSurroundingLand(scene, { y = 0, size = 620, seed = 9, drop = 0.55 } = {}) {
+export function addSurroundingLand(scene, {
+  y = 0, size = 620, seed = 9, drop = 0.55, keepOut = null,
+} = {}) {
   const rand = rng(seed);
   const g = new THREE.Group();
   g.name = 'surroundingLand';
+  // Somewhere else may own a stretch of the horizon — the hill country runs
+  // north out of Onett — so scenery can be told to stay out of a rectangle.
+  const clear = (x, z) => !keepOut
+    || x < keepOut.x0 || x > keepOut.x1 || z < keepOut.z0 || z > keepOut.z1;
 
   const apron = new THREE.Mesh(
     new THREE.PlaneGeometry(size, size),
@@ -516,9 +522,12 @@ export function addSurroundingLand(scene, { y = 0, size = 620, seed = 9, drop = 
     const d = 96 + rand() * 190;
     const r = 14 + rand() * 34;
     const h = 3 + rand() * 11;
+    const mx = Math.cos(a) * d;
+    const mz = Math.sin(a) * d * 0.92;
+    if (!clear(mx, mz)) continue;
     const m = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 6), rand() > 0.5 ? moundMat : darkMound);
     m.scale.y = (h / r) * 0.9;
-    m.position.set(Math.cos(a) * d, y - drop - h * 0.25, Math.sin(a) * d * 0.92);
+    m.position.set(mx, y - drop - h * 0.25, mz);
     g.add(m);
   }
 
@@ -528,8 +537,11 @@ export function addSurroundingLand(scene, { y = 0, size = 620, seed = 9, drop = 
     const a = rand() * Math.PI * 2;
     const d = 110 + rand() * 150;
     const len = 20 + rand() * 50;
+    const hx = Math.cos(a) * d;
+    const hz = Math.sin(a) * d * 0.92;
+    if (!clear(hx, hz)) continue;
     const m = new THREE.Mesh(new THREE.BoxGeometry(len, 2.2, 1.8), hedgeMat);
-    m.position.set(Math.cos(a) * d, y - drop + 1.1, Math.sin(a) * d * 0.92);
+    m.position.set(hx, y - drop + 1.1, hz);
     m.rotation.y = rand() * Math.PI;
     g.add(m);
   }

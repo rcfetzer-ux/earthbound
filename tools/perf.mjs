@@ -19,7 +19,9 @@ const browser = await chromium.launch({
   args: ['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--no-sandbox'],
 });
 const page = await browser.newPage({ viewport: { width: 960, height: 600 } });
-await page.goto('http://localhost:5173/', { waitUntil: 'networkidle' });
+const args = process.argv.slice(2);
+const URL = args.includes('--url') ? args[args.indexOf('--url') + 1] : 'http://localhost:5173/';
+await page.goto(URL, { waitUntil: 'networkidle' });
 await page.click('#start');
 await page.waitForTimeout(1500);
 const info = await page.evaluate(() => {

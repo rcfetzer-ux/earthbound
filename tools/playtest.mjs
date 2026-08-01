@@ -96,7 +96,7 @@ check('starts in Onett', s.zone === 'onett', `at ${s.x},${s.z} y=${s.y}`);
 check('town is populated', s.npcs >= 10 && s.doors >= 6, `${s.npcs} npcs, ${s.doors} doors`);
 
 // --- 2. walking ------------------------------------------------------------
-await teleport('onett', 0, 44, 0);   // open stretch of the south road
+await teleport('onett', 0, 73, 0);   // open stretch of the south road
 let before = await state();
 let after = await holdUntil('ArrowRight', (v) => v.x > before.x + 2, 4000);
 check('walks east', after.x > before.x + 2, `x ${before.x} → ${after.x}`);
@@ -119,30 +119,30 @@ check('running outpaces walking', speeds.run > speeds.walk * 1.3,
 
 // --- 4. stairs change height ----------------------------------------------
 // The east flight, from main street up to the residential shelf.
-await teleport('onett', 57, 4, 2.8);
+await teleport('onett', 89, 4, 2.8);
 before = await state();
 after = await holdUntil('ArrowUp', (v) => v.y > 5.2, 8000);
 check('stairs climb from town to the shelf', after.y > before.y + 1.4,
   `y ${before.y} → ${after.y} (z ${before.z} → ${after.z})`);
 
 // --- 5. cliffs are walls ---------------------------------------------------
-await teleport('onett', 20, -5, 2.8);         // main street, under the shelf cliff
+await teleport('onett', 20, -12, 2.8);        // main street, under the shelf cliff
 before = await state();
 await hold('ArrowUp', 1600);
 after = await state();
-check('cannot walk up a cliff face', after.y < 4.0 && after.z > -9,
+check('cannot walk up a cliff face', after.y < 4.0 && after.z > -17,
   `ended at z=${after.z} y=${after.y}`);
 
 // --- 6. buildings are solid -----------------------------------------------
-await teleport('onett', -9, 6.5, 2.8);        // blank stretch of the library front,
+await teleport('onett', -20, 19, 2.8);        // blank stretch of the library front,
                                               // clear of doors, lamp posts and bushes
 before = await state();
-after = await holdUntil('ArrowUp', (v) => v.z < 4.4, 4000);
-check('cannot walk through a shop wall', after.z > 3.0 && after.z < 5.0,
-  `walked from z=${before.z} to z=${after.z}, wall at 3.0`);
+after = await holdUntil('ArrowUp', (v) => v.z < 16.9, 4000);
+check('cannot walk through a shop wall', after.z > 15.4 && after.z < 17.6,
+  `walked from z=${before.z} to z=${after.z}, wall at 15.5`);
 
 // --- 7. doors: into the house and back out --------------------------------
-await teleport('onett', 32.8, -30.2, 5.8);    // on the path outside the front door
+await teleport('onett', 38.8, -50.2, 5.8);    // on the path outside the front door
 s = await holdUntil('ArrowUp', (v) => v.zone === 'nessHouse', 6000);
 check('front door leads inside', s.zone === 'nessHouse', `zone=${s.zone}`);
 
@@ -184,9 +184,9 @@ for (const [zone, label] of [
 // dropped at the origin, inside a cabinet. Entering by hand would not have
 // caught it — only using the door does.
 for (const [label, zone, x, z, y] of [
-  ['arcade', 'arcade', 24, 5.6, 2.8],
-  ['drug store', 'drugstore', -46, 5.6, 2.8],
-  ['hotel', 'hotel', 43, 5.6, 2.8],
+  ['arcade', 'arcade', 24, 20.4, 2.8],
+  ['drug store', 'drugstore', -66, 20.4, 2.8],
+  ['hotel', 'hotel', 52, 20.4, 2.8],
 ]) {
   await teleport('onett', x, z, y);
   s = await holdUntil('ArrowUp', (v) => v.zone === zone, 6000);
@@ -248,6 +248,61 @@ const geometry = await page.evaluate(() => {
 });
 check('spawns and doors are all reachable', geometry.length === 0, geometry.join('; ') || '8 zones audited');
 
+// --- 9c. the country: you can get out there, and the hills turn you back ---
+// The hills are a height function, not a set of shelves, and walkability comes
+// from the slope. Two things can go wrong and neither shows in a screenshot:
+// the valley floor can pinch shut somewhere and strand you, or the flanks can
+// come out gentle enough to walk over, which would let you leave the map.
+const valley = await page.evaluate(() => {
+  const g = window.__game;
+  g.enterZone('onett', 'start');
+  const z = g.game.zone;
+  const c = z.country;
+  const gaps = [];
+  const soft = [];
+  for (let d = c.southZ - 2; d > c.impact.z - 6; d -= 2) {
+    const x = c.spineX(d);
+    if (z.ground.sample(x, d, 8) === null) gaps.push(+d.toFixed(0));
+    // 40 units off the spine should always be hillside you cannot stand on
+    if (z.ground.sample(x + 46, d, 8) !== null && z.ground.sample(x - 46, d, 8) !== null) {
+      soft.push(+d.toFixed(0));
+    }
+  }
+  return {
+    gaps, soft,
+    mouthY: +c.height(c.spineX(c.southZ - 2), c.southZ - 2).toFixed(1),
+    impactY: +c.height(c.impact.x, c.impact.z).toFixed(1),
+    climb: +(c.height(c.impact.x, c.impact.z + 20) - c.height(c.spineX(c.southZ - 2), c.southZ - 2)).toFixed(1),
+  };
+});
+check('the valley runs unbroken from town to the impact site',
+  valley.gaps.length === 0,
+  valley.gaps.length ? `blocked at z=${valley.gaps.slice(0, 6).join(', ')}` : `climbs ${valley.climb} units`);
+check('the hills either side are too steep to walk up',
+  valley.soft.length === 0,
+  valley.soft.length ? `walkable 46 units off the path at z=${valley.soft.slice(0, 6).join(', ')}` : 'flanks hold');
+
+// And the same thing with the actual mover, which is what the player feels.
+await teleport('onett', 0, 0, 0, 'start');
+await page.evaluate(() => {
+  const g = window.__game;
+  const c = g.game.zone.country;
+  const z = c.southZ - 14;
+  g.player.pos.set(c.spineX(z), c.height(c.spineX(z), z), z);
+  g.player.syncTransform();
+  g.game.doorCooldown = 2;
+});
+await page.waitForTimeout(200);
+before = await state();
+after = await holdUntil('ArrowUp', (v) => v.z < before.z - 12, 9000);
+check('you can walk north into the hills', after.z < before.z - 8,
+  `z ${before.z} → ${after.z}, y ${before.y} → ${after.y}`);
+
+before = after;
+after = await holdUntil('ArrowRight', (v) => v.x > before.x + 40, 6000);
+check('walking sideways runs you into a hillside', after.x < before.x + 34,
+  `x ${before.x} → ${after.x}`);
+
 // --- 10. dialogue ---------------------------------------------------------
 await page.evaluate(() => {
   const g = window.__game;
@@ -283,7 +338,7 @@ for (let i = 0; i < 12 && !closed; i++) {
 check('dialogue pages through and closes', closed);
 
 // --- 11. frame rate -------------------------------------------------------
-await teleport('onett', -20, 10.5, 2.8);
+await teleport('onett', -40, 25, 2.8);
 const fps = await page.evaluate(() => new Promise((resolve) => {
   let frames = 0;
   const t0 = performance.now();
@@ -339,7 +394,7 @@ for (const [label, w, h] of [['landscape', 844, 390], ['portrait', 390, 844]]) {
   // north from there measures a room change rather than a step.
   await mp.evaluate(() => {
     const g = window.__game;
-    g.player.pos.set(0, 0, 44);
+    g.player.pos.set(0, 0, 73);
     g.player.syncTransform();
     g.game.doorCooldown = 0.4;
   });

@@ -14,7 +14,7 @@ const _wanted = new THREE.Vector3();
 
 export class FollowCamera {
   constructor(aspect) {
-    this.camera = new THREE.PerspectiveCamera(32, aspect, 0.5, 400);
+    this.camera = new THREE.PerspectiveCamera(32, aspect, 0.5, 520);
     this.target = new THREE.Vector3();
     this.smoothTarget = new THREE.Vector3();
     this.yaw = 0;              // radians, 0 = looking north (-Z)

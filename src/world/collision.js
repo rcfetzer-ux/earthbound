@@ -32,8 +32,39 @@ export class Ground {
     return this;
   }
 
+  /**
+   * Free-form ground: a continuous height function over a rectangle.
+   *
+   * The town is genuinely built on a grid, and rectangles are the right model
+   * for it. The country outside is not, and describing hills as shelves was
+   * what made every field read as a plate someone had laid down. Here the
+   * ground is whatever `height(x, z)` says it is.
+   *
+   * Walkability comes from the *slope*, not from a boundary: you can go
+   * anywhere the ground rises more gently than `maxSlope`, and a hillside
+   * steeper than that turns you back. That is what makes wandering work —
+   * the thing stopping you is a hill you can see, not an edge you cannot.
+   */
+  field(x0, z0, x1, z1, height, { maxSlope = 0.62, tag = 'field', pri = 0, probe = 0.5 } = {}) {
+    this.plats.push({
+      x0: Math.min(x0, x1), x1: Math.max(x0, x1),
+      z0: Math.min(z0, z1), z1: Math.max(z0, z1),
+      field: height, maxSlope, probe, pri, tag, y0: 0, y1: 0, axis: 'x',
+    });
+    return this;
+  }
+
+  /** Steepness of a field at a point, as rise over run. */
+  static slopeOf(p, x, z) {
+    const e = p.probe;
+    const gx = (p.field(x + e, z) - p.field(x - e, z)) / (2 * e);
+    const gz = (p.field(x, z + e) - p.field(x, z - e)) / (2 * e);
+    return Math.hypot(gx, gz);
+  }
+
   /** Height of a specific platform at a point. */
   static heightOf(p, x, z) {
+    if (p.field) return p.field(x, z);
     if (p.y0 === p.y1) return p.y0;
     const t = p.axis === 'x'
       ? (x - p.x0) / Math.max(1e-6, p.x1 - p.x0)
@@ -51,6 +82,7 @@ export class Ground {
     let bestPri = -1;
     for (const p of this.plats) {
       if (x < p.x0 || x > p.x1 || z < p.z0 || z > p.z1) continue;
+      if (p.field && Ground.slopeOf(p, x, z) > p.maxSlope) continue;
       const y = Ground.heightOf(p, x, z);
       // Highest priority wins (stairs over shelves); within one priority,
       // prefer the surface closest to where the character already is.
@@ -67,7 +99,9 @@ export class Ground {
   /** Any platform at all under this point (ignores height preference). */
   covered(x, z) {
     for (const p of this.plats) {
-      if (x >= p.x0 && x <= p.x1 && z >= p.z0 && z <= p.z1) return true;
+      if (x < p.x0 || x > p.x1 || z < p.z0 || z > p.z1) continue;
+      if (p.field && Ground.slopeOf(p, x, z) > p.maxSlope) continue;
+      return true;
     }
     return false;
   }

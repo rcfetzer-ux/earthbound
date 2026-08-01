@@ -111,8 +111,11 @@ export class HUD {
       visible.push(line.slice(0, remaining));
       remaining -= line.length + 1;   // +1 for the space the wrap consumed
     }
+    // The window is a veil now, not a wall, so whatever is behind it shows
+    // through — the drop shadow has to be opaque black to keep the lettering
+    // legible against a lit wall or a pale road.
     drawText(ctx, visible, {
-      x: 0, y, scale: s, color: '#ffffff', shadow: '#100a1c',
+      x: 0, y, scale: s, color: '#ffffff', shadow: '#000000',
       face: this.face, seed: 11 + this.pageIndex * 5,
     });
     void h;

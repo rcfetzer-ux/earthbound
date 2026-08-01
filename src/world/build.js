@@ -797,6 +797,7 @@ export function bush(x, z, y, ctx, { scale = 1, color = '#4a9c36' } = {}) {
  */
 export function grassTufts(x0, z0, x1, z1, y, {
   count = 90, seed = 1, avoid = [], scale = 1, color = '#4fae3a',
+  heightAt = null, want = null,
 } = {}) {
   const rand = rng(seed);
   const geos = [];
@@ -808,14 +809,18 @@ export function grassTufts(x0, z0, x1, z1, y, {
     const px = lo.x + rand() * w;
     const pz = lo.z + rand() * d;
     if (avoid.some((r) => px > r.x0 - 0.6 && px < r.x1 + 0.6 && pz > r.z0 - 0.6 && pz < r.z1 + 0.6)) continue;
+    if (want && !want(px, pz)) continue;
     i++;
+    // Over open country the ground is not flat, so each tuft is dropped onto
+    // the terrain rather than laid on a plane.
+    const py = heightAt ? heightAt(px, pz) - y : 0;
     const s = (0.62 + rand() * 0.55) * scale;
     const yaw = rand() * Math.PI;
     for (const turn of [0, Math.PI / 2]) {
       const q = new THREE.PlaneGeometry(s * 1.15, s);
       q.translate(0, s / 2, 0);
       q.rotateY(yaw + turn);
-      q.translate(px, 0, pz);
+      q.translate(px, py, pz);
       geos.push(q);
     }
   }
