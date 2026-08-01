@@ -535,12 +535,20 @@ export function building(spec, ctx) {
 
 // --- props -----------------------------------------------------------------
 
-export function tree(x, z, y, { scale = 1, leaf = '#3f8f2f', kind = 'round' } = {}, ctx) {
+/**
+ * @param {Object} o
+ * @param {number} [o.scale]
+ * @param {'round'|'pine'} [o.kind]
+ * @param {boolean} [o.simple]  one canopy blob instead of three. Woodland needs
+ *   to be dense to read as woodland, and past the first row nobody is counting
+ *   the lumps — this buys roughly twice as many trees for the same triangles.
+ */
+export function tree(x, z, y, { scale = 1, leaf = '#3f8f2f', kind = 'round', simple = false } = {}, ctx) {
   const g = new THREE.Group();
   g.position.set(x, y, z);
   const trunkH = 2.0 * scale;
   const trunk = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.28 * scale, 0.38 * scale, trunkH, 7),
+    new THREE.CylinderGeometry(0.28 * scale, 0.38 * scale, trunkH, 6),
     mat(repeated(T.bark(), 1, 1.5), 0xffffff),
   );
   trunk.position.y = trunkH / 2;
@@ -551,16 +559,18 @@ export function tree(x, z, y, { scale = 1, leaf = '#3f8f2f', kind = 'round' } = 
   if (kind === 'pine') {
     for (let i = 0; i < 3; i++) {
       const r = (1.6 - i * 0.42) * scale;
-      const c = new THREE.Mesh(new THREE.ConeGeometry(r, 1.7 * scale, 7), leafMat);
+      const c = new THREE.Mesh(new THREE.ConeGeometry(r, 1.7 * scale, 6), leafMat);
       c.position.y = trunkH * 0.6 + i * 0.95 * scale;
       c.castShadow = true;
       g.add(c);
     }
   } else {
     // three overlapping low-poly spheres: a lumpy, hand-drawn canopy
-    const blobs = [[0, 0, 0, 1.55], [0.75, -0.35, 0.3, 1.1], [-0.7, -0.2, -0.35, 1.15]];
+    const blobs = simple
+      ? [[0, -0.1, 0, 1.7]]
+      : [[0, 0, 0, 1.55], [0.75, -0.35, 0.3, 1.1], [-0.7, -0.2, -0.35, 1.15]];
     for (const [bx, by, bz, br] of blobs) {
-      const s = new THREE.Mesh(new THREE.SphereGeometry(br * scale, 8, 6), leafMat);
+      const s = new THREE.Mesh(new THREE.SphereGeometry(br * scale, 6, 5), leafMat);
       s.position.set(bx * scale, trunkH + 0.9 * scale + by * scale, bz * scale);
       s.castShadow = true;
       s.receiveShadow = true;

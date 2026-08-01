@@ -125,8 +125,8 @@ const flat = await page.evaluate(() => {
   g.enterZone('onett', 'start');
   const z = g.game.zone;
   const bad = [];
-  for (let x = -60; x <= 60; x += 6) {
-    for (let d = -30; d <= 58; d += 6) {
+  for (let x = -66; x <= 66; x += 6) {
+    for (let d = -36; d <= 64; d += 6) {
       const y = z.ground.sample(x, d, 0);
       if (y !== null && Math.abs(y) > 0.01) bad.push(`${x},${d}=${y.toFixed(2)}`);
     }
@@ -137,7 +137,7 @@ check('the streets are all on one level', flat.length === 0,
   flat.length ? flat.slice(0, 5).join(' ') : 'no step anywhere in the grid');
 
 // --- 5. the woods around the town are walls --------------------------------
-await teleport('onett', 60, 74, 0);           // the plain's south edge, off the gate
+await teleport('onett', 60, 86, 0);           // the plain's south edge, off the gate
 before = await state();
 await hold('ArrowDown', 2600);
 after = await state();
@@ -145,15 +145,15 @@ check('the woods stop you leaving town', after.z < 105,
   `ended at z=${after.z} y=${after.y}`);
 
 // --- 6. buildings are solid -----------------------------------------------
-await teleport('onett', -43, 14, 0);          // blank stretch of the drug store front,
+await teleport('onett', -49, 14, 0);          // blank stretch of the drug store front,
                                               // clear of doors, lamp posts and bushes
 before = await state();
-after = await holdUntil('ArrowDown', (v) => v.z > 19.4, 4000);
-check('cannot walk through a shop wall', after.z > 19.2 && after.z < 21.4,
-  `walked from z=${before.z} to z=${after.z}, wall at 20.5`);
+after = await holdUntil('ArrowDown', (v) => v.z > 20.4, 4000);
+check('cannot walk through a shop wall', after.z > 20.2 && after.z < 22.4,
+  `walked from z=${before.z} to z=${after.z}, wall at 21.5`);
 
 // --- 7. doors: into the house and back out --------------------------------
-await teleport('onett', 47.6, -62, 0);        // on the path outside the front door
+await teleport('onett', 54.5, -64, 0);        // on the path outside the front door
 s = await holdUntil('ArrowLeft', (v) => v.zone === 'nessHouse', 6000);
 check('front door leads inside', s.zone === 'nessHouse', `zone=${s.zone}`);
 
@@ -195,9 +195,9 @@ for (const [zone, label] of [
 // dropped at the origin, inside a cabinet. Entering by hand would not have
 // caught it — only using the door does.
 for (const [label, zone, x, z, y, key] of [
-  ['arcade', 'arcade', 18, 15, 0, 'ArrowDown'],
-  ['drug store', 'drugstore', -40, 15, 0, 'ArrowDown'],
-  ['hotel', 'hotel', -46, -32, 0, 'ArrowUp'],
+  ['arcade', 'arcade', 20, 15, 0, 'ArrowDown'],
+  ['drug store', 'drugstore', -45, 15, 0, 'ArrowDown'],
+  ['hotel', 'hotel', -50, -35, 0, 'ArrowUp'],
 ]) {
   await teleport('onett', x, z, y);
   s = await holdUntil(key, (v) => v.zone === zone, 6000);

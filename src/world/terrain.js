@@ -41,7 +41,7 @@ const FLANK = 14;
 const FLANK_RUN = 13;
 
 /** How far out from the town you can still walk before the ground lifts. */
-const FRINGE = 11;
+const FRINGE = 8;
 
 const smoothstep = (a, b, t) => {
   const k = Math.min(1, Math.max(0, (t - a) / (b - a)));
@@ -249,10 +249,13 @@ export function landMesh(land, {
 
     const s = Math.min(1, land.slope(x, z) / 1.05);
     c.copy(grass);
-    if (z < land.town.z0) {
+    // The valley's own tinting has to fade in rather than switch on at the
+    // plain's edge, or the map carries a hard colour seam straight across it.
+    const wild = smoothstep(0, 22, land.town.z0 - z);
+    if (wild > 0) {
       const off = land.offSpine(x, z);
-      c.lerp(deep, off * 0.2);
-      c.lerp(dry, (1 - off) * 0.4 * (1 - s));
+      c.lerp(deep, off * 0.2 * wild);
+      c.lerp(dry, (1 - off) * 0.4 * (1 - s) * wild);
     }
     c.lerp(rock, s * 0.7);
     // Scorch, painted into the ground itself. A flat decal laid on a dish is

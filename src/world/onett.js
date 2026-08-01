@@ -52,7 +52,7 @@ export const HILL_Y = 15.0;
 const BOUNDS = { x0: -150, x1: 150, z0: -210, z1: 150 };
 
 /** The flat plain the town stands on. Past this the ground lifts into woods. */
-const TOWN = { x0: -92, x1: 92, z0: -82, z1: 78 };
+const TOWN = { x0: -96, x1: 96, z0: -80, z1: 90 };
 
 /** Where the meteorite came down, far out in the hills to the north-west. */
 const IMPACT = { x: -46, z: -170 };
@@ -62,10 +62,14 @@ const IMPACT = { x: -46, z: -170 };
 // Roads are 10 across with a 3.4 pavement each side. Naming everything once
 // here means the blocks, the buildings and the pavements cannot drift apart.
 
-const ROAD_H = 5;         // half the roadway
-const WALK_W = 3.4;
-const AVE = [-56, 0, 56];       // north–south road centres
-const ST = [-28, 12, 52];       // east–west road centres
+// The reference map's streets are pale bands with the blocks green right up
+// to them. The first pass used a 10-wide road with a 3.4 pavement each side,
+// which is 17 across per street — six of those turned the whole grid into one
+// concrete slab with buildings sitting on it.
+const ROAD_H = 4.5;       // half the roadway
+const WALK_W = 2.2;
+const AVE = [-62, 0, 62];       // north–south road centres
+const ST = [-32, 14, 60];       // east–west road centres
 
 const GRID = {
   x0: AVE[0] - ROAD_H - WALK_W,   // -64.4
@@ -75,7 +79,7 @@ const GRID = {
 };
 
 /** The lane north-east to your house. */
-const LANE_Z = -72;
+const LANE_Z = -78;
 
 const HOUSE_H = 2.7;      // per storey
 const SHOP_H = 3.7;
@@ -154,10 +158,10 @@ export function buildOnett(timeName = DEFAULT_TIME) {
   // NW block — city hall in its park
   // ======================================================================
 
-  const blockNW = { x0: AVE[0] + 8.4, x1: AVE[1] - 8.4, z0: ST[0] + 8.4, z1: ST[1] - 8.4 };
+  const blockNW = { x0: AVE[0] + 6.7, x1: AVE[1] - 6.7, z0: ST[0] + 6.7, z1: ST[1] - 6.7 };
 
   const hall = building({
-    name: 'city hall', x: -28, z: -3, y: 0, w: 22, d: 13, h: 4.6,
+    name: 'city hall', x: -31, z: -3, y: 0, w: 22, d: 13, h: 4.6,
     wall: P.wallCream, wallTex: 'stucco', roof: P.roofGreen, roofType: 'hip', roofH: 2.6,
     cornice: true, pilasters: true, base: { tex: 'stone', h: 1.0 }, yaw: 0.006,
     sign: { text: 'CITY HALL', bg: '#3a7a52', fg: '#fff6e0', side: 'south', y: 3.3, w: 8.5, h: 1.1 },
@@ -185,11 +189,11 @@ export function buildOnett(timeName = DEFAULT_TIME) {
   ped.position.set(0, 4.8, 7.4);
   hall.add(ped);
   S.add(hall);
-  pave(zone, -30.5, 3.5, -25.5, 7, 0, T.walk(), 4);
+  pave(zone, -33.5, 3.5, -28.5, 7.3, 0, T.walk(), 4);
 
-  parkBlock(zone, S, ctx, blockNW, { skip: { x0: -41, x1: -15, z0: -11, z1: 5 }, seed: 3 });
-  S.add(flowerPatch(-46, -6, 0, 9));
-  S.add(flowerPatch(-11, -6, 0, 9));
+  parkBlock(zone, S, ctx, blockNW, { skip: { x0: -44, x1: -18, z0: -11, z1: 5 }, seed: 3 });
+  S.add(flowerPatch(-51, -12, 0, 9));
+  S.add(flowerPatch(-13, -14, 0, 9));
 
   // ======================================================================
   // NE block — the downtown terrace
@@ -201,7 +205,7 @@ export function buildOnett(timeName = DEFAULT_TIME) {
   ];
   rowColours.forEach(([wall, roof], i) => {
     S.add(building({
-      name: 'downtown', x: 11.5 + i * 8.3, z: -3, y: 0, w: 7.2, d: 13,
+      name: 'downtown', x: 9.5 + i * 9.5, z: -3, y: 0, w: 7.2, d: 13,
       h: 2.9, storeys: 3, wall, wallTex: i % 2 ? 'brick' : 'stucco',
       roof, roofType: 'flat', cornice: shade(roof, 0.12),
       base: { tex: 'stone', h: 0.8 }, pilasters: true,
@@ -215,7 +219,7 @@ export function buildOnett(timeName = DEFAULT_TIME) {
       ],
     }, ctx));
   });
-  for (let x = 12; x < 48; x += 8.5) S.add(tree(x, -14, 0, { scale: 1.0 }, ctx));
+  for (let x = 9; x < 54; x += 6.5) S.add(tree(x, -15 - (x % 13) * 0.4, 0, { scale: 0.95 }, ctx));
 
   // ======================================================================
   // SW block — the shops, facing north across the middle street
@@ -223,27 +227,27 @@ export function buildOnett(timeName = DEFAULT_TIME) {
 
   const shopRow = [
     {
-      name: 'drug store', x: -40, w: 13, wall: P.brick, wallTex: 'brick', roof: P.roofRed,
+      name: 'drug store', x: -45, w: 13, wall: P.brick, wallTex: 'brick', roof: P.roofRed,
       sign: 'DRUG STORE', signBg: '#c03a30', icon: 'pill', awn: ['#3f9c4a', '#f4f0e2', true],
       target: 'drugstore',
     },
     {
-      name: 'bakery', x: -26, w: 11, wall: P.wallCream, wallTex: 'stucco', roof: P.roofOrange,
+      name: 'bakery', x: -30, w: 11, wall: P.wallCream, wallTex: 'stucco', roof: P.roofOrange,
       sign: 'BAKERY', signBg: '#e0872c', icon: 'bread', awn: ['#e0872c', '#f4f0e2', false],
     },
     {
-      name: 'burger shop', x: -13, w: 11, wall: P.wallSalmon, wallTex: 'stucco', roof: '#d8563c',
+      name: 'burger shop', x: -16, w: 11, wall: P.wallSalmon, wallTex: 'stucco', roof: '#d8563c',
       sign: 'BURGER', signBg: '#c03a30', icon: 'burger', awn: ['#f0c040', '#f4f0e2', false],
     },
   ];
-  shopRow.forEach((s, i) => S.add(shopfront(s, 26.5, 'north', i, ctx)));
+  shopRow.forEach((s, i) => S.add(shopfront(s, 27.5, 'north', i, ctx)));
 
   // ======================================================================
   // SE block — the arcade and the library
   // ======================================================================
 
   const arcade = building({
-    name: 'arcade', x: 18, z: 26.5, y: 0, w: 15, d: 12, h: 3.9,
+    name: 'arcade', x: 20, z: 27.5, y: 0, w: 15, d: 12, h: 3.9,
     wall: P.wallLilac, wallTex: 'stucco', roof: '#6a4a9a', roofType: 'flat',
     cornice: '#5a3a86', base: { tex: 'cobble', h: 0.7 }, pilasters: true, yaw: 0.01,
     sign: { text: 'ARCADE', bg: '#4a2a6a', fg: '#ffe060', icon: 'arcade', side: 'north', y: 3.1, w: 8, h: 1.3 },
@@ -274,17 +278,17 @@ export function buildOnett(timeName = DEFAULT_TIME) {
   S.add(arcade);
 
   S.add(shopfront({
-    name: 'library', x: 39, w: 13, wall: P.wallTan, wallTex: 'stucco', roof: P.roofGreen,
+    name: 'library', x: 43, w: 13, wall: P.wallTan, wallTex: 'stucco', roof: P.roofGreen,
     sign: 'LIBRARY', signBg: '#3a7a52', icon: 'book', awn: null,
-  }, 26.5, 'north', 1, ctx));
+  }, 27.5, 'north', 1, ctx));
 
   // Houses backing onto the south street from both southern blocks.
   for (const [x, wall, roof] of [
-    [-38, P.wallMint, P.roofPurple], [-17, P.wallSky, P.roofBlue],
-    [17, P.wallSalmon, P.roofGrey], [40, P.wallCream, P.roofRed],
+    [-45, P.wallMint, P.roofPurple], [-20, P.wallSky, P.roofBlue],
+    [20, P.wallSalmon, P.roofGrey], [45, P.wallCream, P.roofRed],
   ]) {
     S.add(building({
-      name: 'house', x, z: 37.5, y: 0, w: 11, d: 10, h: HOUSE_H, storeys: 2,
+      name: 'house', x, z: 44, y: 0, w: 11, d: 10, h: HOUSE_H, storeys: 2,
       wall, wallTex: 'siding', roof, roofType: x % 2 ? 'hip' : 'gable', ridge: 'x',
       roofH: 1.9, chimney: true, cornice: true, base: { tex: 'stone', h: 0.5 },
       yaw: (x > 0 ? 0.016 : -0.014),
@@ -295,10 +299,10 @@ export function buildOnett(timeName = DEFAULT_TIME) {
         { side: 'south', offset: 0, y: 3.7, w: 1.3, h: 1.3 },
       ],
     }, ctx));
-    S.add(fence(x - 4, 45.4, 0, 5, 'x', ctx, P.wallWhite));
-    S.add(fence(x + 4.6, 45.4, 0, 5, 'x', ctx, P.wallWhite));
-    pave(zone, x - 1.4, 42.5, x + 1.4, 47, 0, T.walk(), 4);
-    S.add(mailbox(x + 2.6, 45.9, 0, ctx));
+    S.add(fence(x - 4, 51.6, 0, 5, 'x', ctx, P.wallWhite));
+    S.add(fence(x + 4.6, 51.6, 0, 5, 'x', ctx, P.wallWhite));
+    pave(zone, x - 1.4, 49, x + 1.4, 53.3, 0, T.walk(), 4);
+    S.add(mailbox(x + 2.6, 52.1, 0, ctx));
   }
 
   // ======================================================================
@@ -307,7 +311,7 @@ export function buildOnett(timeName = DEFAULT_TIME) {
 
   // North side: the hotel and a row of small places facing the top street.
   S.add(building({
-    name: 'hotel', x: -46, z: -43, y: 0, w: 16, d: 11, h: 2.8, storeys: 2,
+    name: 'hotel', x: -50, z: -47, y: 0, w: 16, d: 11, h: 2.8, storeys: 2,
     wall: P.wallSky, wallTex: 'siding', roof: P.roofBlue, roofType: 'hip', roofH: 2.1,
     trim: P.wallWhite, cornice: true, base: { tex: 'stone', h: 0.6 }, yaw: -0.01,
     sign: { text: 'HOTEL', bg: P.roofBlue, fg: '#ffffff', icon: 'bed', side: 'south', y: 2.5, w: 6, h: 1.1 },
@@ -321,15 +325,15 @@ export function buildOnett(timeName = DEFAULT_TIME) {
       { side: 'south', offset: 5.4, y: 3.7, w: 1.5, h: 1.3, lit: true },
     ],
   }, ctx));
-  pave(zone, -47.4, -37.5, -44.6, -33, 0, T.walk(), 4);
+  pave(zone, -51.4, -41.5, -48.6, -38.7, 0, T.walk(), 4);
 
   for (const [x, wall, roof, label] of [
-    [-16, P.wallCream, P.roofOrange, 'HOUSE'],
+    [-18, P.wallCream, P.roofOrange, 'HOUSE'],
     [14, P.wallMint, P.roofRed, 'HOUSE'],
-    [42, P.wallSalmon, P.roofGrey, 'HOUSE'],
+    [46, P.wallSalmon, P.roofGrey, 'HOUSE'],
   ]) {
     S.add(building({
-      name: 'house', x, z: -43, y: 0, w: 11, d: 10, h: HOUSE_H, storeys: 2,
+      name: 'house', x, z: -47, y: 0, w: 11, d: 10, h: HOUSE_H, storeys: 2,
       wall, wallTex: 'siding', roof, roofType: 'gable', ridge: 'x', roofH: 1.9,
       chimney: true, cornice: true, base: { tex: 'stone', h: 0.5 }, yaw: 0.014,
       doors: [{ side: 'south', offset: 0, target: null, label }],
@@ -339,12 +343,12 @@ export function buildOnett(timeName = DEFAULT_TIME) {
         { side: 'south', offset: 0, y: 3.7, w: 1.3, h: 1.3 },
       ],
     }, ctx));
-    pave(zone, x - 1.4, -37.5, x + 1.4, -33, 0, T.walk(), 4);
+    pave(zone, x - 1.4, -42, x + 1.4, -38.7, 0, T.walk(), 4);
   }
 
   // West side: the hospital, turned to face the avenue.
   const hospital = building({
-    name: 'hospital', x: -76, z: 12, y: 0, w: 14, d: 20, h: 4.2,
+    name: 'hospital', x: -79, z: 14, y: 0, w: 14, d: 20, h: 4.2,
     wall: P.wallWhite, wallTex: 'stucco', roof: '#c8c4b8', roofType: 'flat',
     cornice: '#dfe6ea', pilasters: true, base: { tex: 'stone', h: 0.7 },
     signBand: { y: 3.1 }, yaw: -0.008,
@@ -364,12 +368,12 @@ export function buildOnett(timeName = DEFAULT_TIME) {
   cross.position.set(7.2, 5.1, 0);
   hospital.add(cross);
   S.add(hospital);
-  pave(zone, -69, 10.6, -64.4, 13.4, 0, T.walk(), 4);
+  pave(zone, -72, 12.6, -68.7, 15.4, 0, T.walk(), 4);
 
   // East side: two houses turned in toward the avenue.
-  for (const [z, wall, roof] of [[-4, P.wallCream, P.roofRed], [32, P.wallLilac, P.roofPurple]]) {
+  for (const [z, wall, roof] of [[-6, P.wallCream, P.roofRed], [36, P.wallLilac, P.roofPurple]]) {
     S.add(building({
-      name: 'house', x: 76, z, y: 0, w: 12, d: 10, h: HOUSE_H, storeys: 2,
+      name: 'house', x: 79, z, y: 0, w: 12, d: 10, h: HOUSE_H, storeys: 2,
       wall, wallTex: 'siding', roof, roofType: 'gable', ridge: 'z', roofH: 1.9,
       chimney: true, cornice: true, base: { tex: 'stone', h: 0.5 }, yaw: 0.012,
       doors: [{ side: 'west', offset: 0, target: null, label: 'HOUSE' }],
@@ -379,14 +383,14 @@ export function buildOnett(timeName = DEFAULT_TIME) {
         { side: 'west', offset: 0, y: 3.7, w: 1.3, h: 1.3 },
       ],
     }, ctx));
-    pave(zone, 64.4, z - 1.4, 70, z + 1.4, 0, T.walk(), 4);
-    S.add(fence(66, z - 6.4, 0, 8, 'x', ctx, P.wallWhite));
-    S.add(fence(66, z + 6.4, 0, 8, 'x', ctx, P.wallWhite));
+    pave(zone, 68.7, z - 1.4, 73, z + 1.4, 0, T.walk(), 4);
+    S.add(fence(70, z - 6.4, 0, 8, 'x', ctx, P.wallWhite));
+    S.add(fence(70, z + 6.4, 0, 8, 'x', ctx, P.wallWhite));
   }
 
   // South side: the police station and two more houses.
   S.add(building({
-    name: 'police station', x: -30, z: 68, y: 0, w: 15, d: 11, h: 3.6,
+    name: 'police station', x: -34, z: 74, y: 0, w: 15, d: 11, h: 3.6,
     wall: P.wallTan, wallTex: 'brick', roof: P.roofBlue, roofType: 'gable', ridge: 'x',
     roofH: 1.8, cornice: true, base: { tex: 'stone', h: 0.7 }, pilasters: true, yaw: 0.012,
     sign: { text: 'POLICE', bg: '#2c3a6a', fg: '#f0f4ff', icon: 'shield', side: 'north', y: 2.5, w: 7, h: 1.1 },
@@ -396,10 +400,10 @@ export function buildOnett(timeName = DEFAULT_TIME) {
       { side: 'north', offset: 4.6, y: 1.0, w: 1.4, h: 1.4 },
     ],
   }, ctx));
-  pave(zone, -31.4, 60.4, -28.6, 62.6, 0, T.walk(), 4);
-  for (const [x, wall, roof] of [[6, P.wallMint, P.roofGreen], [38, P.wallSky, P.roofRed]]) {
+  pave(zone, -35.4, 66.7, -32.6, 68.6, 0, T.walk(), 4);
+  for (const [x, wall, roof] of [[16, P.wallMint, P.roofGreen], [46, P.wallSky, P.roofRed]]) {
     S.add(building({
-      name: 'house', x, z: 68, y: 0, w: 11, d: 10, h: HOUSE_H, storeys: 2,
+      name: 'house', x, z: 74, y: 0, w: 11, d: 10, h: HOUSE_H, storeys: 2,
       wall, wallTex: 'siding', roof, roofType: 'gable', ridge: 'x', roofH: 1.9,
       chimney: true, cornice: true, base: { tex: 'stone', h: 0.5 }, yaw: -0.014,
       doors: [{ side: 'north', offset: 0, target: null, label: 'HOUSE' }],
@@ -408,7 +412,7 @@ export function buildOnett(timeName = DEFAULT_TIME) {
         { side: 'north', offset: 3.2, y: 1.0, w: 1.3, h: 1.4 },
       ],
     }, ctx));
-    pave(zone, x - 1.4, 60.4, x + 1.4, 62.6, 0, T.walk(), 4);
+    pave(zone, x - 1.4, 66.7, x + 1.4, 68.6, 0, T.walk(), 4);
   }
 
   // ======================================================================
@@ -416,7 +420,7 @@ export function buildOnett(timeName = DEFAULT_TIME) {
   // ======================================================================
 
   S.add(building({
-    name: "player's house", x: 38, z: -62, y: 0, w: 12, d: 10,
+    name: "player's house", x: 44, z: -64, y: 0, w: 12, d: 10,
     h: HOUSE_H, storeys: 2, wall: P.wallCream, wallTex: 'siding',
     roof: P.roofRed, roofType: 'gable', ridge: 'z', roofH: 2.1, roofOverhang: 0.8,
     chimney: true, trim: shade(P.wallCream, -0.22), cornice: true,
@@ -430,15 +434,15 @@ export function buildOnett(timeName = DEFAULT_TIME) {
       { side: 'north', offset: 0, y: 3.7, w: 1.3, h: 1.3 },
     ],
   }, ctx));
-  pave(zone, 44, -63.4, 47.6, -60.6, 0, T.walk(), 4);
-  S.add(fence(45.6, -68, 0, 8, 'z', ctx, P.wallWhite));
-  S.add(fence(45.6, -56, 0, 8, 'z', ctx, P.wallWhite));
-  S.add(mailbox(45.8, -58.6, 0, ctx));
-  S.add(tree(31, -70, 0, { scale: 1.1 }, ctx));
-  S.add(flowerPatch(35, -54, 0, 8));
+  pave(zone, 50, -65.4, 55.3, -62.6, 0, T.walk(), 4);
+  S.add(fence(51.6, -70, 0, 8, 'z', ctx, P.wallWhite));
+  S.add(fence(51.6, -58, 0, 8, 'z', ctx, P.wallWhite));
+  S.add(mailbox(51.8, -60.6, 0, ctx));
+  S.add(tree(36, -72, 0, { scale: 1.1 }, ctx));
+  S.add(flowerPatch(40, -55, 0, 8));
 
   S.add(building({
-    name: 'neighbours', x: 74, z: -62, y: 0, w: 12, d: 10,
+    name: 'neighbours', x: 79, z: -64, y: 0, w: 12, d: 10,
     h: HOUSE_H, storeys: 2, wall: P.wallSky, wallTex: 'siding',
     roof: P.roofBlue, roofType: 'gable', ridge: 'z', roofH: 2.1, roofOverhang: 0.8,
     chimney: true, trim: P.wallWhite, cornice: true,
@@ -451,25 +455,25 @@ export function buildOnett(timeName = DEFAULT_TIME) {
       { side: 'south', offset: 0, y: 1.0, w: 1.3, h: 1.4 },
     ],
   }, ctx));
-  pave(zone, 64.4, -63.4, 68, -60.6, 0, T.walk(), 4);
-  S.add(fence(66.4, -68, 0, 8, 'z', ctx, P.wallWhite));
-  S.add(fence(66.4, -56, 0, 8, 'z', ctx, P.wallWhite));
-  S.add(mailbox(66.2, -58.6, 0, ctx));
-  S.add(tree(84, -68, 0, { scale: 1.2 }, ctx));
+  pave(zone, 68.7, -65.4, 73, -62.6, 0, T.walk(), 4);
+  S.add(fence(71.4, -70, 0, 8, 'z', ctx, P.wallWhite));
+  S.add(fence(71.4, -58, 0, 8, 'z', ctx, P.wallWhite));
+  S.add(mailbox(71.2, -60.6, 0, ctx));
+  S.add(tree(89, -70, 0, { scale: 1.2 }, ctx));
 
   // The lane dead-ends here, with the town sign at the turn.
-  S.add(signPost(49, -74, 0, 'ONETT', ctx, { bg: '#3a7a52', fg: '#fff6e0', rotation: -0.3 }));
+  S.add(signPost(55, -80, 0, 'ONETT', ctx, { bg: '#3a7a52', fg: '#fff6e0', rotation: -0.3 }));
 
   // ======================================================================
   // The two ways out
   // ======================================================================
 
   // North-west: the track up to the hills, behind a police cordon.
-  for (const bx of [-33.5, -26.5]) S.add(barricade(bx, -47, 0, ctx, 'x'));
-  S.add(signPost(-21, -44, 0, 'KEEP OUT', ctx,
+  for (const bx of [-33.5, -26.5]) S.add(barricade(bx, -54, 0, ctx, 'x'));
+  S.add(signPost(-21, -52, 0, 'KEEP OUT', ctx,
     { bg: '#f0e0a0', fg: '#c03828', rotation: 2.7 }));
   zone.interactables.push({
-    x: -30, z: -78, r: 5.0, name: 'the way north',
+    x: -30, z: -76, r: 5.0, name: 'the way north',
     lines: ['The track gives out here. Past this it is all hills.',
       'Somewhere out there, still smoking, is whatever came down last night.'],
   });
@@ -554,20 +558,36 @@ export function buildOnett(timeName = DEFAULT_TIME) {
       }
     }
   }
+  // On the plain: trees on every scrap of ground the town is not using. The
+  // reference map is woodland with a town cut into it, not a town with a few
+  // trees in it, and the first pass read as the latter — big empty lawns
+  // inside the blocks and a bare margin all round.
   scatterLand(land, {
-    x0: -160, x1: 160, z0: -230, z1: 150, count: 300, seed: 12,
-    want: (x, y, z, i) => {
-      if (land.fromImpact(x, z) < 30) return false;
-      if (i.slope > 1.7) return false;
-      // dense outside the town, sparse inside it, never on the streets
-      if (land.onPlain(x, z)) return i.out > -34 && freeOf(x, z, 3.2) && i.rand() > 0.55;
-      return freeOf(x, z, 2.0);
+    x0: TOWN.x0 - 6, x1: TOWN.x1 + 6, z0: TOWN.z0 - 6, z1: TOWN.z1 + 6,
+    count: 760, seed: 12,
+    want: (x, y, z, i) => land.onPlain(x, z) && freeOf(x, z, 3.0),
+    place: (x, y, z, i) => {
+      // Detailed canopies near the streets where you walk; single blobs out
+      // in the margins, which is most of them.
+      const near = Math.abs(x) < GRID.x1 + 10 && z > GRID.z0 - 10 && z < GRID.z1 + 10;
+      S.add(tree(x, z, y, {
+        scale: 0.85 + i.rand() * 0.45,
+        kind: i.rand() > 0.7 ? 'pine' : 'round',
+        simple: !near,
+      }, ctx));
     },
+  });
+  // And off it: the woods the town sits in, and the hillsides beyond.
+  scatterLand(land, {
+    x0: -160, x1: 160, z0: -230, z1: 150, count: 620, seed: 17,
+    want: (x, y, z, i) => !land.onPlain(x, z) && i.slope < 1.7
+      && land.fromImpact(x, z) > 30 && freeOf(x, z, 2.0),
     place: (x, y, z, i) => {
       S.add(tree(x, z, y, {
         scale: 0.9 + i.rand() * 0.5,
         kind: i.rand() > 0.45 ? 'pine' : 'round',
-      }, land.onPlain(x, z) ? ctx : null));
+        simple: true,
+      }));
     },
   });
 
@@ -625,13 +645,13 @@ export function buildOnett(timeName = DEFAULT_TIME) {
   // Spawns and cast
   // ======================================================================
 
-  zone.addSpawn('start', 48.6, -62, 0, 'left');
-  zone.addSpawn('front', 48.6, -62, 0, 'left');
-  zone.addSpawn('neighborHouse', 63.4, -62, 0, 'right');
-  zone.addSpawn('drugstore', -40, 17.4, 0, 'up');
-  zone.addSpawn('arcade', 18, 17.4, 0, 'up');
-  zone.addSpawn('hotel', -46, -34.6, 0, 'down');
-  zone.addSpawn('hospital', -63.6, 12, 0, 'left');
+  zone.addSpawn('start', 54.6, -64, 0, 'left');
+  zone.addSpawn('front', 54.6, -64, 0, 'left');
+  zone.addSpawn('neighborHouse', 69.4, -64, 0, 'right');
+  zone.addSpawn('drugstore', -45, 18.9, 0, 'up');
+  zone.addSpawn('arcade', 20, 18.9, 0, 'up');
+  zone.addSpawn('hotel', -50, -37.6, 0, 'down');
+  zone.addSpawn('hospital', -67.9, 14, 0, 'left');
 
   populateOnett(zone, land);
   return zone;
@@ -677,16 +697,10 @@ function parkBlock(zone, S, ctx, b, { skip = null, seed = 1 } = {}) {
   const rand = rng(seed);
   const cx = (b.x0 + b.x1) / 2;
   const cz = (b.z0 + b.z1) / 2;
-  // a path around the inside edge of the block
-  pave(zone, b.x0, b.z0, b.x1, b.z0 + 2.6, 0, T.walk(), 4);
-  pave(zone, b.x0, b.z1 - 2.6, b.x1, b.z1, 0, T.walk(), 4);
-  pave(zone, b.x0, b.z0, b.x0 + 2.6, b.z1, 0, T.walk(), 4);
-  pave(zone, b.x1 - 2.6, b.z0, b.x1, b.z1, 0, T.walk(), 4);
-
   const clear = (x, z) => !skip
     || x < skip.x0 - 1.5 || x > skip.x1 + 1.5 || z < skip.z0 - 1.5 || z > skip.z1 + 1.5;
 
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 46; i++) {
     const x = b.x0 + 3 + rand() * (b.x1 - b.x0 - 6);
     const z = b.z0 + 3 + rand() * (b.z1 - b.z0 - 6);
     if (!clear(x, z)) continue;
@@ -927,63 +941,63 @@ function populateOnett(zone, land) {
   /** @type {Array<[string, number, number, number, string[], object]>} */
   const cast = [
     // the lane, outside your house
-    ['mom', 46.5, -57.5, 0, [
+    ['mom', 52.5, -59.5, 0, [
       "Don't wander too far, dear.",
       'And put on a jacket if it gets cold out on those hills.',
     ], { wander: 0 }],
-    ['neighborKid', 60, -60, 0, [
+    ['neighborKid', 66, -62, 0, [
       "Oh — it's you. Did the noise wake you up too?",
       'Something fell out of the sky and came down way out in the hills. The whole house shook!',
     ], { wander: 2.5 }],
-    ['dog', 54, -50, 0, ['Woof!'], { wander: 5, speed: 3.4, scale: 0.9 }],
+    ['dog', 60, -52, 0, ['Woof!'], { wander: 5, speed: 3.4, scale: 0.9 }],
 
     // the top street
-    ['townsman', -26, -34.8, 0, [
+    ['townsman', -26, -37.6, 0, [
       'The police shut the track north about an hour ago.',
       'Nobody in this town has slept since that thing came down.',
     ], { wander: 3 }],
-    ['granny', 14, -34.8, 0, [
+    ['granny', 14, -37.6, 0, [
       'In sixty years I have never heard a bang like that.',
       'Not even when my husband tried to fix the boiler.',
     ], { wander: 0 }],
 
     // the middle street and the shops
-    ['businessman', -33, 18.6, 0, [
+    ['businessman', -36, 19.6, 0, [
       'Meteorite or no meteorite, the shops open at nine.',
     ], { wander: 2.5 }],
-    ['townswoman', -47, 18.6, 0, [
+    ['townswoman', -52, 19.6, 0, [
       'The drug store has everything. Bandages, cola, umbrellas...',
     ], { wander: 2.5 }],
-    ['punk', 11, 18.6, 0, [
+    ['punk', 12, 19.6, 0, [
       'This is our street, got it?',
       'Ahh, forget it. My high score is unbeatable anyway.',
     ], { wander: 2 }],
-    ['neighborKidSmall', 25, 18.6, 0, [
+    ['neighborKidSmall', 29, 19.6, 0, [
       'I spent all my allowance in the arcade.',
       'Worth it!',
     ], { wander: 2 }],
-    ['photographer', -4, 5.4, 0, [
+    ['photographer', -6, 8.4, 0, [
       'Say — you have a great face for a photograph!',
       'I take pictures all over the world. One day I will get one of you.',
     ], { wander: 0 }],
-    ['townsman', 46, 5.4, 0, [
+    ['townsman', 50, 8.4, 0, [
       'Those offices have been half empty for years.',
       'Onett is not the town it was, they tell me. I would not know.',
     ], { wander: 3 }],
-    ['dog', 30, 12, 0, ['Arf!'], { wander: 7, speed: 3.8, scale: 0.9 }],
+    ['dog', 34, 14, 0, ['Arf!'], { wander: 7, speed: 3.8, scale: 0.9 }],
 
     // city hall park
-    ['granny', -20, -8, 0, [
+    ['granny', -22, -12, 0, [
       'I sit here most mornings. It is the only quiet corner left.',
       'Well. It was, until last night.',
     ], { wander: 0 }],
-    ['townswoman', -40, -14, 0, [
+    ['townswoman', -48, -18, 0, [
       'They keep saying they will fix the clock on the hall.',
       'They have been saying it since I was at school.',
     ], { wander: 3 }],
 
     // the hospital and the west avenue
-    ['nurse', -62, 12, 0, [
+    ['nurse', -66, 14, 0, [
       'If you get hurt out there, come straight to the hospital.',
       "We're open through the night, and it has been a long one already.",
     ], { wander: 0 }],
@@ -993,20 +1007,20 @@ function populateOnett(zone, land) {
       'Road south is closed, kid. Orders.',
       'Something about the traffic. Nobody believes that either.',
     ], { wander: 0 }],
-    ['townsman', -30, 60.8, 0, [
+    ['townsman', -46, 65.6, 0, [
       'Two buses came through this morning and neither of them stopped.',
     ], { wander: 3 }],
-    ['townswoman', 38, 60.8, 0, [
+    ['townswoman', 40, 65.6, 0, [
       'That road goes south to Twoson.',
       'It is a long walk. Longer than you think.',
     ], { wander: 2.5 }],
 
     // the cordon at the foot of the track, and one who went on ahead
-    ['cop', -32, -43, 0, [
+    ['cop', -32.5, -50, 0, [
       'Police business, kid. Nobody goes up the valley.',
       "...Between you and me? I have no idea what that thing is either.",
     ], { wander: 0 }],
-    ['cop', -22, -50, 0, [
+    ['cop', -25, -59, 0, [
       'Keep behind the barricade, please.',
     ], { wander: 1.5 }],
   ];
