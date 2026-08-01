@@ -1,27 +1,25 @@
 /**
- * Rolling country.
+ * The land Onett sits in.
  *
- * The town is genuinely built on a grid and terraced rectangles are the honest
- * model for it. The land outside it is not, and describing the hills the same
- * way was what made every field read as a plate someone had laid down — you
- * could feel the rectangles even where there was nothing but grass.
+ * One height function for the whole outdoors. There are no terraces, no
+ * stairs and no cliff seams anywhere in the map, because those seams were what
+ * you could feel: hard straight edges cutting across the world at arbitrary
+ * places, and boulders jutting out of them.
  *
- * So the wilds are a continuous height function instead. One expression gives
- * both the mesh you see and the height the collider samples, which means the
- * shape of the ground and the shape of the walk are the same thing by
- * construction, and there is no invisible boundary anywhere.
+ * The shape follows the town map:
  *
- * The shape is deliberate, not noise:
+ *   plain    the town is dead flat — it is built on a grid and it should read
+ *            that way — with a grassy fringe around it you can walk out onto
+ *   rim      beyond that the ground lifts into wooded hills, steeper than the
+ *            collider's slope limit, so what stops you is a hillside you can
+ *            see rather than an edge you cannot
+ *   gate     one gap in that rim to the south: the road out to Twoson
+ *   valley   and one to the north-west: a floor that meanders between the hills
+ *            as it climbs, out to where the meteorite came down
  *
- *   climb    the land rises steadily the further north you go
- *   meander  a valley floor that wanders east and west as it climbs, so you
- *            never see where you are going for more than a bend at a time
- *   flanks   ground that rises hard either side of that floor. Steeper than
- *            the collider's slope limit, so the hills turn you back — the
- *            thing stopping you is a hillside you can see, not an edge
- *   pockets  the floor widens and narrows, opening into clearings
- *   bumps    hummocks in the floor itself, kept gentle enough to walk over
- *   bowl     a wide saucer around the impact site, so the meteorite has room
+ * The same expression drives the mesh you see and the height the collider
+ * samples, so the shape of the ground and the shape of the walk are the same
+ * thing by construction.
  */
 import * as THREE from 'three';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
@@ -29,18 +27,21 @@ import { T, repeated, rng } from '../core/tex.js';
 import { P, shade } from '../core/palette.js';
 
 /**
- * How high the ground rises either side of the valley floor, and over what
- * distance.
+ * How the wooded rim around the town rises, and how the valley's flanks do.
  *
- * Two constraints pull against each other. The steepest gradient the flank
- * reaches is 1.5 * FLANK / FLANK_RUN, and it has to comfortably clear the
- * collider's slope limit or the hills are a suggestion rather than a wall.
- * But the afternoon sun sits at 30 degrees, so a flank of height H standing
- * this close to the path throws a shadow about 1.7 H long — take FLANK much
- * above this and the valley floor is in permanent darkness.
+ * The steepest gradient a smoothstep of height H over run R reaches is
+ * 1.5 H / R, and it has to comfortably clear the collider's slope limit or the
+ * hills are a suggestion rather than a wall. Against that, the afternoon sun
+ * sits at 30 degrees, so a slope of height H throws a shadow about 1.7 H long:
+ * push these much higher and the valley floor lives in permanent darkness.
  */
+const RIM = 17;
+const RIM_RUN = 20;
 const FLANK = 14;
 const FLANK_RUN = 13;
+
+/** How far out from the town you can still walk before the ground lifts. */
+const FRINGE = 11;
 
 const smoothstep = (a, b, t) => {
   const k = Math.min(1, Math.max(0, (t - a) / (b - a)));
@@ -49,93 +50,139 @@ const smoothstep = (a, b, t) => {
 
 /**
  * @param {Object} o
- * @param {number} o.seed
- * @param {number} o.southZ    where the country starts (the town's north edge)
- * @param {number} o.northZ    the far end, past the impact site
- * @param {number} o.baseY     ground height where it meets the town
- * @param {number} o.topY      ground height at the far end
- * @param {{x:number,z:number}} o.impact  centre of the crater bowl
+ * @param {{x0,x1,z0,z1}} o.town   the flat plain the town is built on
+ * @param {number} o.mouthX        where the valley leaves the plain
+ * @param {{x,z}} o.impact         where the meteorite came down
+ * @param {number} o.northZ        the far end of the valley
+ * @param {number} o.topY          how high the land is by the time you get there
+ * @param {number} o.gateX         where the Twoson road leaves to the south
  */
-export function makeCountry({
-  seed = 5, southZ = -55, northZ = -170, baseY = 5.8, topY = 15.5,
-  impact = { x: 0, z: -140 },
+export function makeOnettLand({
+  seed = 5,
+  town = { x0: -92, x1: 92, z0: -82, z1: 78 },
+  mouthX = -30,
+  impact = { x: -46, z: -170 },
+  northZ = -210,
+  topY = 15.0,
+  gateX = 0,
 } = {}) {
   const rand = rng(seed);
-  const span = southZ - northZ;          // positive: how deep the country runs
+  const span = town.z0 - northZ;
 
-  // Hummocks in the valley floor. Small enough that the slope limit never
-  // trips on them — these are for the eye and the walk, not for blocking.
+  // Hummocks in the valley floor: for the eye and the walk, gentle enough that
+  // the slope limit never trips on them.
   const humps = [];
-  for (let i = 0; i < 34; i++) {
+  for (let i = 0; i < 30; i++) {
     humps.push({
       x: (rand() - 0.5) * 200,
-      z: northZ + rand() * span,
-      r: 9 + rand() * 16,
-      h: 0.5 + rand() * 1.5,
+      z: northZ + rand() * (span - 26),
+      r: 12 + rand() * 18,
+      h: 0.5 + rand() * 1.3,
     });
   }
-  // Knolls out on the flanks, where steepness is welcome.
+  // Knolls out on the hills, where steepness is welcome.
   const knolls = [];
-  for (let i = 0; i < 22; i++) {
+  for (let i = 0; i < 26; i++) {
     knolls.push({
-      x: (rand() - 0.5) * 240,
-      z: northZ - 14 + rand() * (span + 28),
-      r: 14 + rand() * 22,
-      h: 6 + rand() * 14,
+      x: (rand() - 0.5) * 260,
+      z: northZ - 20 + rand() * (span + 90),
+      r: 15 + rand() * 24,
+      h: 5 + rand() * 13,
     });
+  }
+
+  /**
+   * The tree line wobbles rather than following the town's rectangle, so the
+   * edge of the plain is a wandering boundary instead of a box.
+   */
+  function wobble(x, z) {
+    return Math.sin(x * 0.041 + 1.3) * 6.5
+      + Math.sin(z * 0.053 - 0.7) * 5.5
+      + Math.sin((x + z) * 0.028 + 2.1) * 4.0;
+  }
+
+  /**
+   * How far outside the plain a point is; negative anywhere on it.
+   *
+   * The wobble displaces the tree line, and it must only ever do that from
+   * *outside*. Subtracting it unconditionally lets a negative wobble register
+   * as distance in the middle of the town, which lifted the ground a few
+   * centimetres under the streets — flat everywhere except where it wasn't.
+   */
+  function outside(x, z) {
+    const dx = Math.max(town.x0 - x, 0, x - town.x1);
+    const dz = Math.max(town.z0 - z, 0, z - town.z1);
+    const raw = Math.hypot(dx, dz);
+    if (raw <= 0) return -1;
+    return raw - wobble(x, z);
   }
 
   /** Centre of the valley floor at a given depth — the meander. */
   function spineX(z) {
-    const t = (southZ - z) / span;              // 0 at the town, 1 at the far end
-    return Math.sin(t * 5.1) * 30
-      + Math.sin(t * 11.3 + 1.7) * 13
-      + t * 8;
+    const t = (town.z0 - z) / span;         // 0 at the plain, 1 at the far end
+    return mouthX
+      + Math.sin(t * 4.6) * 26
+      + Math.sin(t * 10.7 + 1.9) * 12
+      - t * 22;
   }
 
-  /** Half-width of the walkable floor at a given depth. */
+  /** Half-width of the walkable valley floor at a given depth. */
   function spineWidth(z) {
-    const t = (southZ - z) / span;
-    const base = 11 + Math.sin(t * 7.4 + 0.6) * 4.5;        // pockets and pinches
-    // the mouth, where the town's track arrives, opens out
-    const mouth = 14 * Math.exp(-(((z - southZ) / 22) ** 2));
-    // and so does the bowl around the impact site
+    const t = (town.z0 - z) / span;
+    const base = 11 + Math.sin(t * 7.1 + 0.6) * 4.5;        // pockets and pinches
+    const mouth = 15 * Math.exp(-(((z - town.z0) / 26) ** 2));
     const bowl = 20 * Math.exp(-(((z - impact.z) / 30) ** 2));
     return base + mouth + bowl;
   }
 
-  function height(x, z) {
-    // 1. the climb north
-    const t = Math.min(1, Math.max(0, (southZ - z) / span));
-    let y = baseY + (topY - baseY) * smoothstep(0, 1, t);
-
-    // 2. flanks: ground rises away from the valley floor, hard
-    const w = spineWidth(z);
-    const off = Math.abs(x - spineX(z));
-    // A smoothstep alone saturates, which leaves a flat plateau on top of the
-    // hill — unreachable, but walkable if you ever got there. Past the
-    // transition the ground keeps climbing at a gradient the collider refuses,
-    // so the hills are hills all the way up rather than mesas.
-    y += FLANK * smoothstep(w, w + FLANK_RUN, off)
-      + Math.min(34, Math.max(0, off - (w + FLANK_RUN)) * 0.85);
-
-    // 3. hummocks in the floor
-    for (const b of humps) {
-      const d = Math.hypot(x - b.x, z - b.z);
-      if (d < b.r) y += b.h * (1 - smoothstep(0, b.r, d));
-    }
-    // 4. knolls, which only really show once you are up on the flanks
-    for (const b of knolls) {
-      const d = Math.hypot(x - b.x, z - b.z);
-      if (d < b.r) y += b.h * (1 - smoothstep(0, b.r, d)) * smoothstep(w * 0.5, w + 6, off);
-    }
-
-    // 5. the impact site: a dish punched into the floor with a thrown-up rim
+  /** The crater: a dish punched into the floor with a thrown-up rim. */
+  function craterAt(x, z) {
     const di = Math.hypot(x - impact.x, z - impact.z);
-    y += 1.5 * Math.exp(-(((di - 17) / 7) ** 2));      // thrown-up rim
-    y -= 3.4 * (1 - smoothstep(0, 16, di));            // dish
+    return 1.5 * Math.exp(-(((di - 17) / 7) ** 2)) - 3.4 * (1 - smoothstep(0, 16, di));
+  }
 
-    return y;
+  function height(x, z) {
+    // --- north of the plain: the valley out to the impact site -------------
+    if (z < town.z0) {
+      const t = Math.min(1, Math.max(0, (town.z0 - z) / span));
+      let y = (topY) * smoothstep(0, 1, t);
+
+      const w = spineWidth(z);
+      const off = Math.abs(x - spineX(z));
+      // A smoothstep alone saturates into a flat plateau on top of the hill —
+      // unreachable, but walkable if you ever got there. Past the transition
+      // the ground keeps climbing at a gradient the collider refuses.
+      y += FLANK * smoothstep(w, w + FLANK_RUN, off)
+        + Math.min(30, Math.max(0, off - (w + FLANK_RUN)) * 0.85);
+
+      for (const b of humps) {
+        const d = Math.hypot(x - b.x, z - b.z);
+        if (d < b.r) y += b.h * (1 - smoothstep(0, b.r, d));
+      }
+      for (const b of knolls) {
+        const d = Math.hypot(x - b.x, z - b.z);
+        if (d < b.r) y += b.h * (1 - smoothstep(0, b.r, d)) * smoothstep(w * 0.5, w + 6, off);
+      }
+      y += craterAt(x, z);
+
+      // ease the whole thing to nothing where it meets the plain, so the
+      // valley mouth opens out of flat ground with no lip
+      return y * smoothstep(0, 20, town.z0 - z);
+    }
+
+    // --- the plain, and the wooded rim around it ---------------------------
+    const d = outside(x, z);
+    if (d <= 0) return 0;                                  // the town is flat
+
+    // one gap to the south: the road out to Twoson
+    const gate = z > town.z1 ? Math.exp(-(((x - gateX) / 15) ** 2)) : 0;
+    let y = RIM * smoothstep(FRINGE, FRINGE + RIM_RUN, d)
+      + Math.min(26, Math.max(0, d - (FRINGE + RIM_RUN)) * 0.8);
+    for (const b of knolls) {
+      const dd = Math.hypot(x - b.x, z - b.z);
+      if (dd < b.r) y += b.h * (1 - smoothstep(0, b.r, dd)) * smoothstep(FRINGE, FRINGE + 14, d);
+    }
+    return y * (1 - gate * 0.95);
   }
 
   /** How far off the valley floor a point is, 0 at the spine and 1 at the flank. */
@@ -144,30 +191,40 @@ export function makeCountry({
     return smoothstep(w * 0.45, w + 12, Math.abs(x - spineX(z)));
   }
 
-  function slope(x, z, e = 0.6) {
+  function slope(x, z, e = 0.7) {
     const gx = (height(x + e, z) - height(x - e, z)) / (2 * e);
     const gz = (height(x, z + e) - height(x, z - e)) / (2 * e);
     return Math.hypot(gx, gz);
   }
 
-  /** Distance from the impact site — used to keep scenery out of the crater. */
   function fromImpact(x, z) {
     return Math.hypot(x - impact.x, z - impact.z);
   }
 
-  return { height, slope, spineX, spineWidth, offSpine, fromImpact, southZ, northZ, impact, span };
+  /** True on the flat plain the town is built on. */
+  function onPlain(x, z) {
+    return z >= town.z0 && outside(x, z) <= 0;
+  }
+
+  return {
+    height, slope, spineX, spineWidth, offSpine, fromImpact, onPlain, outside,
+    town, impact, northZ, span, mouthX, gateX,
+    /** Where the valley starts, i.e. the plain's north edge. */
+    southZ: town.z0,
+  };
 }
 
 /**
- * Build the visible ground for a country.
+ * Build the visible ground for the whole map.
  *
- * The mesh runs well past the walkable floor and off the edge of the map, so
- * the hills carry on into the distance rather than stopping at a rim. Colour
- * is per-vertex on top of the grass texture: browner and greyer as the ground
- * steepens, worn and dusty down the middle of the floor where the walking is.
+ * One mesh. Every seam the old terraced version had was a place two rectangles
+ * met at different heights, and there is nowhere for one of those to hide.
+ * Colour is per-vertex on top of the grass texture: greyer as the ground
+ * steepens, drier down the middle of the valley where the walking is, burnt
+ * around the impact site.
  */
-export function countryMesh(country, {
-  x0 = -150, x1 = 150, z0 = -190, z1 = -50, step = 2.6,
+export function landMesh(land, {
+  x0 = -170, x1 = 170, z0 = -240, z1 = 170, step = 3.8,
 } = {}) {
   const nx = Math.max(2, Math.round((x1 - x0) / step));
   const nz = Math.max(2, Math.round((z1 - z0) / step));
@@ -178,9 +235,9 @@ export function countryMesh(country, {
   const pos = geo.attributes.position;
   const colors = new Float32Array(pos.count * 3);
   const grass = new THREE.Color(P.grass);
-  const dry = new THREE.Color('#c8b978');
+  const dry = new THREE.Color('#c3b478');
   const rock = new THREE.Color('#9a8f7e');
-  const deep = new THREE.Color(shade(P.grass, -0.3));
+  const deep = new THREE.Color(shade(P.grass, -0.26));
   const burnt = new THREE.Color('#584036');
   const singed = new THREE.Color('#7d6a44');
   const c = new THREE.Color();
@@ -188,18 +245,19 @@ export function countryMesh(country, {
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i);
     const z = pos.getZ(i);
-    pos.setY(i, country.height(x, z));
+    pos.setY(i, land.height(x, z));
 
-    const s = Math.min(1, country.slope(x, z) / 1.05);
-    const off = country.offSpine(x, z);
-    // green in the hollows, drier along the trodden middle, rock on the steeps
-    c.copy(grass).lerp(deep, off * 0.2);
-    c.lerp(dry, (1 - off) * 0.42 * (1 - s));
-    c.lerp(rock, s * 0.72);
-    // Scorch, painted into the ground itself. A flat decal disc laid on a dish
-    // is half buried and half floating; this follows the bowl exactly because
-    // it *is* the bowl.
-    const di = country.fromImpact(x, z);
+    const s = Math.min(1, land.slope(x, z) / 1.05);
+    c.copy(grass);
+    if (z < land.town.z0) {
+      const off = land.offSpine(x, z);
+      c.lerp(deep, off * 0.2);
+      c.lerp(dry, (1 - off) * 0.4 * (1 - s));
+    }
+    c.lerp(rock, s * 0.7);
+    // Scorch, painted into the ground itself. A flat decal laid on a dish is
+    // half buried and half floating; this follows the bowl because it is it.
+    const di = land.fromImpact(x, z);
     c.lerp(singed, 1 - smoothstep(12, 26, di));
     c.lerp(burnt, 1 - smoothstep(4, 15, di));
     colors[i * 3] = c.r;
@@ -210,7 +268,7 @@ export function countryMesh(country, {
   geo.computeVertexNormals();
 
   // UVs come out 0..1 across the whole plate; retile them in world units so
-  // the grass keeps a constant grain however big the country is.
+  // the grass keeps a constant grain however big the map is.
   const uv = geo.attributes.uv;
   for (let i = 0; i < uv.count; i++) {
     uv.setXY(i, (pos.getX(i) - x0) / 7, (pos.getZ(i) - z0) / 7);
@@ -220,26 +278,32 @@ export function countryMesh(country, {
     map: repeated(T.grass(), 1, 1), vertexColors: true,
   }));
   mesh.receiveShadow = true;
-  mesh.name = 'country';
+  mesh.name = 'land';
   return mesh;
 }
 
 /**
- * Scatter something across a country, letting the terrain decide where.
+ * Scatter something across the land, letting the terrain decide where.
  *
- * `place(x, y, z, rand)` is called for each accepted point. `want` picks which
- * points are acceptable — trees on the flanks, boulders on the steeps, grass on
- * the floor — so the planting follows the shape of the land instead of a grid.
+ * `place(x, y, z, info)` is called for each accepted point; `want` picks which
+ * points are acceptable — trees on the hillsides, boulders on the steeps,
+ * scrub at the break of slope. The planting follows the shape of the land, so
+ * the land is what you end up reading.
  */
-export function scatterCountry(country, {
+export function scatterLand(land, {
   x0, x1, z0, z1, count = 120, seed = 11, want = () => true, place,
 }) {
   const rand = rng(seed);
-  for (let i = 0, tries = 0; i < count && tries < count * 12; tries++) {
+  for (let i = 0, tries = 0; i < count && tries < count * 14; tries++) {
     const x = x0 + rand() * (x1 - x0);
     const z = z0 + rand() * (z1 - z0);
-    const y = country.height(x, z);
-    const info = { slope: country.slope(x, z), off: country.offSpine(x, z), rand };
+    const y = land.height(x, z);
+    const info = {
+      slope: land.slope(x, z),
+      off: z < land.town.z0 ? land.offSpine(x, z) : 1,
+      out: land.outside(x, z),
+      rand,
+    };
     if (!want(x, y, z, info)) continue;
     i++;
     place(x, y, z, info);
@@ -247,31 +311,31 @@ export function scatterCountry(country, {
 }
 
 /**
- * A worn trail down the middle of the valley floor.
+ * A worn trail following the valley floor.
  *
  * Laid as a ribbon that follows the meander and floats a few centimetres above
  * the ground, which is enough at this camera angle and far cheaper than
  * re-triangulating the terrain around a path.
  */
-export function countryTrail(country, { from, to, width = 1.9, segments = 90 }) {
+export function landTrail(land, { from, to, width = 1.9, segments = 90 }) {
   const geos = [];
   const lift = 0.09;
   for (let i = 0; i < segments; i++) {
     const z0 = from + ((to - from) * i) / segments;
     const z1 = from + ((to - from) * (i + 1)) / segments;
-    const a = country.spineX(z0);
-    const b = country.spineX(z1);
+    const a = land.spineX(z0);
+    const b = land.spineX(z1);
     // widen and narrow a little so it reads as worn, not painted
     const w0 = width * (0.8 + 0.35 * Math.abs(Math.sin(z0 * 0.11)));
     const w1 = width * (0.8 + 0.35 * Math.abs(Math.sin(z1 * 0.11)));
     const quad = new THREE.BufferGeometry();
     const verts = new Float32Array([
-      a - w0, country.height(a - w0, z0) + lift, z0,
-      a + w0, country.height(a + w0, z0) + lift, z0,
-      b + w1, country.height(b + w1, z1) + lift, z1,
-      a - w0, country.height(a - w0, z0) + lift, z0,
-      b + w1, country.height(b + w1, z1) + lift, z1,
-      b - w1, country.height(b - w1, z1) + lift, z1,
+      a - w0, land.height(a - w0, z0) + lift, z0,
+      a + w0, land.height(a + w0, z0) + lift, z0,
+      b + w1, land.height(b + w1, z1) + lift, z1,
+      a - w0, land.height(a - w0, z0) + lift, z0,
+      b + w1, land.height(b + w1, z1) + lift, z1,
+      b - w1, land.height(b - w1, z1) + lift, z1,
     ]);
     const uvs = new Float32Array([0, i, 1, i, 1, i + 1, 0, i, 1, i + 1, 0, i + 1]);
     quad.setAttribute('position', new THREE.BufferAttribute(verts, 3));

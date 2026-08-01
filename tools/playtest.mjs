@@ -96,7 +96,7 @@ check('starts in Onett', s.zone === 'onett', `at ${s.x},${s.z} y=${s.y}`);
 check('town is populated', s.npcs >= 10 && s.doors >= 6, `${s.npcs} npcs, ${s.doors} doors`);
 
 // --- 2. walking ------------------------------------------------------------
-await teleport('onett', 0, 73, 0);   // open stretch of the south road
+await teleport('onett', 20, 12, 0);  // the middle street, clear tarmac
 let before = await state();
 let after = await holdUntil('ArrowRight', (v) => v.x > before.x + 2, 4000);
 check('walks east', after.x > before.x + 2, `x ${before.x} → ${after.x}`);
@@ -117,33 +117,44 @@ const speeds = await page.evaluate(() => {
 check('running outpaces walking', speeds.run > speeds.walk * 1.3,
   `${speeds.walk} vs ${speeds.run} units/s`);
 
-// --- 4. stairs change height ----------------------------------------------
-// The east flight, from main street up to the residential shelf.
-await teleport('onett', 89, 4, 2.8);
-before = await state();
-after = await holdUntil('ArrowUp', (v) => v.y > 5.2, 8000);
-check('stairs climb from town to the shelf', after.y > before.y + 1.4,
-  `y ${before.y} → ${after.y} (z ${before.z} → ${after.z})`);
+// --- 4. the town is flat ---------------------------------------------------
+// It is built on a grid and it should sit on level ground: no shelf, no stair,
+// no seam anywhere between one side of the streets and the other.
+const flat = await page.evaluate(() => {
+  const g = window.__game;
+  g.enterZone('onett', 'start');
+  const z = g.game.zone;
+  const bad = [];
+  for (let x = -60; x <= 60; x += 6) {
+    for (let d = -30; d <= 58; d += 6) {
+      const y = z.ground.sample(x, d, 0);
+      if (y !== null && Math.abs(y) > 0.01) bad.push(`${x},${d}=${y.toFixed(2)}`);
+    }
+  }
+  return bad;
+});
+check('the streets are all on one level', flat.length === 0,
+  flat.length ? flat.slice(0, 5).join(' ') : 'no step anywhere in the grid');
 
-// --- 5. cliffs are walls ---------------------------------------------------
-await teleport('onett', 20, -12, 2.8);        // main street, under the shelf cliff
+// --- 5. the woods around the town are walls --------------------------------
+await teleport('onett', 60, 74, 0);           // the plain's south edge, off the gate
 before = await state();
-await hold('ArrowUp', 1600);
+await hold('ArrowDown', 2600);
 after = await state();
-check('cannot walk up a cliff face', after.y < 4.0 && after.z > -17,
+check('the woods stop you leaving town', after.z < 105,
   `ended at z=${after.z} y=${after.y}`);
 
 // --- 6. buildings are solid -----------------------------------------------
-await teleport('onett', -20, 19, 2.8);        // blank stretch of the library front,
+await teleport('onett', -43, 14, 0);          // blank stretch of the drug store front,
                                               // clear of doors, lamp posts and bushes
 before = await state();
-after = await holdUntil('ArrowUp', (v) => v.z < 16.9, 4000);
-check('cannot walk through a shop wall', after.z > 15.4 && after.z < 17.6,
-  `walked from z=${before.z} to z=${after.z}, wall at 15.5`);
+after = await holdUntil('ArrowDown', (v) => v.z > 19.4, 4000);
+check('cannot walk through a shop wall', after.z > 19.2 && after.z < 21.4,
+  `walked from z=${before.z} to z=${after.z}, wall at 20.5`);
 
 // --- 7. doors: into the house and back out --------------------------------
-await teleport('onett', 38.8, -50.2, 5.8);    // on the path outside the front door
-s = await holdUntil('ArrowUp', (v) => v.zone === 'nessHouse', 6000);
+await teleport('onett', 47.6, -62, 0);        // on the path outside the front door
+s = await holdUntil('ArrowLeft', (v) => v.zone === 'nessHouse', 6000);
 check('front door leads inside', s.zone === 'nessHouse', `zone=${s.zone}`);
 
 if (s.zone === 'nessHouse') {
@@ -183,13 +194,13 @@ for (const [zone, label] of [
 // move: the door named a spawn the arcade did not define, so the player was
 // dropped at the origin, inside a cabinet. Entering by hand would not have
 // caught it — only using the door does.
-for (const [label, zone, x, z, y] of [
-  ['arcade', 'arcade', 24, 20.4, 2.8],
-  ['drug store', 'drugstore', -66, 20.4, 2.8],
-  ['hotel', 'hotel', 52, 20.4, 2.8],
+for (const [label, zone, x, z, y, key] of [
+  ['arcade', 'arcade', 18, 15, 0, 'ArrowDown'],
+  ['drug store', 'drugstore', -40, 15, 0, 'ArrowDown'],
+  ['hotel', 'hotel', -46, -32, 0, 'ArrowUp'],
 ]) {
   await teleport('onett', x, z, y);
-  s = await holdUntil('ArrowUp', (v) => v.zone === zone, 6000);
+  s = await holdUntil(key, (v) => v.zone === zone, 6000);
   if (s.zone !== zone) {
     check(`${label}: door leads inside`, false, `zone=${s.zone}`);
     continue;
@@ -248,6 +259,37 @@ const geometry = await page.evaluate(() => {
 });
 check('spawns and doors are all reachable', geometry.length === 0, geometry.join('; ') || '8 zones audited');
 
+// --- 9b2. nobody is standing in a doorway ---------------------------------
+// Characters are solid. One parked on a door trigger blocks the entrance, and
+// if it is also that building's exit spawn you walk out of the building into
+// them. Neither shows up in a screenshot.
+const doorways = await page.evaluate(() => {
+  const g = window.__game;
+  const names = ['onett', 'nessHouse', 'nessBedroom', 'neighborHouse', 'drugstore', 'arcade', 'hotel', 'hospital'];
+  const out = [];
+  for (const n of names) {
+    g.enterZone(n, 'start');
+    const z = g.game.zone;
+    for (const npc of z.npcs) {
+      for (const d of z.doors) {
+        const gap = Math.hypot(d.x - npc.pos.x, d.z - npc.pos.z);
+        if (gap < (d.r ?? 1.2) + (npc.radius ?? 0.42) + 0.35) {
+          const who = npc.name ?? npc.kind ?? 'someone';
+          out.push(`${n}: ${who} is in the way of '${d.label}' (${gap.toFixed(1)} away)`);
+        }
+      }
+      for (const [key, sp] of Object.entries(z.spawns)) {
+        if (Math.hypot(sp.x - npc.pos.x, sp.z - npc.pos.z) < 1.4) {
+          out.push(`${n}: ${npc.name ?? npc.kind} is standing on spawn '${key}'`);
+        }
+      }
+    }
+  }
+  return out;
+});
+check('no one is standing in a doorway', doorways.length === 0,
+  doorways.join('; ') || 'every entrance is clear');
+
 // --- 9c. the country: you can get out there, and the hills turn you back ---
 // The hills are a height function, not a set of shelves, and walkability comes
 // from the slope. Two things can go wrong and neither shows in a screenshot:
@@ -260,7 +302,7 @@ const valley = await page.evaluate(() => {
   const c = z.country;
   const gaps = [];
   const soft = [];
-  for (let d = c.southZ - 2; d > c.impact.z - 6; d -= 2) {
+  for (let d = c.southZ - 4; d > c.impact.z - 6; d -= 2) {
     const x = c.spineX(d);
     if (z.ground.sample(x, d, 8) === null) gaps.push(+d.toFixed(0));
     // 40 units off the spine should always be hillside you cannot stand on
@@ -338,7 +380,7 @@ for (let i = 0; i < 12 && !closed; i++) {
 check('dialogue pages through and closes', closed);
 
 // --- 11. frame rate -------------------------------------------------------
-await teleport('onett', -40, 25, 2.8);
+await teleport('onett', 0, 12, 0);
 const fps = await page.evaluate(() => new Promise((resolve) => {
   let frames = 0;
   const t0 = performance.now();
@@ -394,7 +436,7 @@ for (const [label, w, h] of [['landscape', 844, 390], ['portrait', 390, 844]]) {
   // north from there measures a room change rather than a step.
   await mp.evaluate(() => {
     const g = window.__game;
-    g.player.pos.set(0, 0, 73);
+    g.player.pos.set(0, 0, 40);
     g.player.syncTransform();
     g.game.doorCooldown = 0.4;
   });
@@ -418,9 +460,9 @@ for (const [label, w, h] of [['landscape', 844, 390], ['portrait', 390, 844]]) {
     g.player.model.rotation.y = g.player.yaw;
     g.player.syncTransform();
   });
-  await mp.waitForTimeout(300);
+  await mp.waitForTimeout(500);
   await mp.locator('#btn-a').tap();
-  await mp.waitForTimeout(600);
+  await mp.waitForTimeout(1100);
   const talked = await mp.evaluate(() => !document.getElementById('dialogue').classList.contains('hidden'));
   check(`mobile ${label}: A button talks`, talked);
   if (mErrs.length) check(`mobile ${label}: no page errors`, false, mErrs.join(' | '));

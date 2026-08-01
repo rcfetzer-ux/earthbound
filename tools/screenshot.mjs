@@ -23,23 +23,24 @@ const ONLY = arg('only', null);
 
 /** [name, zone, spawnOrPos, camYawDegrees] */
 const SHOTS = [
-  ['01-front-door', 'onett', { x: 39, z: -50, y: 5.8 }, 0],
-  ['02-shelf-street', 'onett', { x: 50, z: -39.5, y: 5.8 }, 20],
-  ['03-stairs-down', 'onett', { x: 89, z: -18, y: 5.8 }, 0],
-  ['04-main-street', 'onett', { x: -40, z: 25, y: 2.8 }, 0],
-  ['05-shops', 'onett', { x: -24, z: 18.5, y: 2.8 }, -25],
-  ['06-civic-row', 'onett', { x: -22, z: 32.8, y: 2.8 }, 180],
-  ['07-hotel', 'onett', { x: 52, z: 18.5, y: 2.8 }, 0],
-  ['09-south-road', 'onett', { x: -20, z: 73, y: 0 }, 0],
-  ['10-drugstore-front', 'onett', { x: -66, z: 18.5, y: 2.8 }, 0],
-  ['19-camera-occlusion', 'onett', { x: -66, z: 18, y: 2.8 }, 0],
-  ['21-town-sign', 'onett', { x: 13, z: -66, y: 5.8 }, 0],
-  ['22-west-stairs', 'onett', { x: -79, z: 50, y: 1.4 }, 0],
-  ['24-town-green', 'onett', { x: 4, z: -9, y: 2.8 }, 180],
-  ['25-valley-mouth', 'onett', { x: 15, z: -84, y: 6 }, 0],
-  ['26-valley-mid', 'onett', { x: 20, z: -108, y: 8 }, 0],
-  ['27-valley-bend', 'onett', { x: 33, z: -132, y: 12 }, 0],
-  ['08-meteorite', 'onett', { x: -4.6, z: -152, y: 13 }, 0],
+  ['01-front-door', 'onett', { x: 48.6, z: -62, y: 0 }, 90],
+  ['02-lane', 'onett', { x: 56, z: -52, y: 0 }, 0],
+  ['03-top-street', 'onett', { x: -30, z: -28, y: 0 }, 0],
+  ['04-main-street', 'onett', { x: -28, z: 12, y: 0 }, 0],
+  ['05-shops', 'onett', { x: -26, z: 18.6, y: 0 }, 180],
+  ['06-city-hall', 'onett', { x: -28, z: 9, y: 0 }, 0],
+  ['07-downtown', 'onett', { x: 28, z: 9, y: 0 }, 0],
+  ['08-meteorite', 'onett', { x: -46, z: -164, y: 13 }, 0],
+  ['09-south-road', 'onett', { x: 0, z: 74, y: 0 }, 0],
+  ['10-drugstore-front', 'onett', { x: -40, z: 17.6, y: 0 }, 180],
+  ['19-camera-occlusion', 'onett', { x: -40, z: 19, y: 0 }, 180],
+  ['21-junction', 'onett', { x: 0, z: 12, y: 0 }, 45],
+  ['22-arcade-front', 'onett', { x: 18, z: 17.6, y: 0 }, 180],
+  ['23-hospital', 'onett', { x: -64, z: 12, y: 0 }, -90],
+  ['25-valley-mouth', 'onett', { x: -30, z: -92, y: 1 }, 0],
+  ['26-valley-mid', 'onett', { x: -20, z: -125, y: 8 }, 0],
+  ['27-valley-bend', 'onett', { x: -40, z: -150, y: 12 }, 0],
+  ['28-north-cordon', 'onett', { x: -30, z: -40, y: 0 }, 0],
   ['11-home-inside', 'nessHouse', 'front', 0],
   ['12-bedroom', 'nessBedroom', 'stairs', 0],
   ['13-drugstore-inside', 'drugstore', 'front', 0],
@@ -112,9 +113,9 @@ if (!ONLY || '18-dialogue'.includes(ONLY)) {
     const g = window.__game;
     g.enterZone('onett', 'start');
     const npc = g.game.zone.npcs.find((n) => n.kind === 'neighborKid') ?? g.game.zone.npcs[0];
-    npc.pos.set(51.5, 5.8, -48.7);
+    npc.pos.set(48.6, 0, -58);
     npc.syncTransform();
-    g.player.pos.set(51.5, 5.8, -47.2);
+    g.player.pos.set(48.6, 0, -56.5);
     g.player.facePoint(npc.pos.x, npc.pos.z);
     g.player.yaw = g.player.targetYaw;
     g.player.model.rotation.y = g.player.yaw;
@@ -133,8 +134,8 @@ if (!ONLY || '20-odd-font'.includes(ONLY)) {
   await page.evaluate(() => {
     const g = window.__game;
     g.enterZone('onett', 'start');
-    g.player.pos.set(-4.6, 13, -151);
-    g.player.pos.y = g.game.zone.ground.sample(-4.6, -151, 13) ?? 13;
+    g.player.pos.set(-46, 13, -163);
+    g.player.pos.y = g.game.zone.ground.sample(-46, -163, 13) ?? 13;
     g.player.syncTransform();
     g.cam.desiredYaw = 0;
     g.cam.yaw = 0;
